@@ -104,7 +104,7 @@ const initialState: PlayQueue = {
   scrobble: Boolean(parsedSettings.scrobble),
   isLoading: Boolean(false),
   repeat: String(parsedSettings.repeat),
-  shuffle: Boolean(parsedSettings.shuffle),
+  shuffle: parsedSettings.shuffle === true || parsedSettings.shuffle === 'true',
   sortColumn: undefined,
   sortType: 'asc',
   displayQueue: false,

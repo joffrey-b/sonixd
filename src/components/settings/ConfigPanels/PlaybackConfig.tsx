@@ -151,6 +151,7 @@ const PlaybackConfig = ({ bordered }: any) => {
               size="md"
               defaultChecked={volumeFade}
               checked={volumeFade}
+              disabled={crossfadeDuration === 0}
               onChange={(e: boolean) => handleSetVolumeFade(e)}
             />
           }
@@ -164,9 +165,9 @@ const PlaybackConfig = ({ bordered }: any) => {
               <StyledButton
                 onClick={() => {
                   setCrossfadeDuration(0);
-                  setPollingInterval(15);
+                  setPollingInterval(10);
                   handleSetCrossfadeDuration(0);
-                  handleSetPollingInterval(15);
+                  handleSetPollingInterval(10);
                 }}
               >
                 {t('Gapless')}
