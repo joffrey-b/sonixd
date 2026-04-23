@@ -867,3 +867,11 @@ export const getLyrics = async (options: { artist: string; title: string }) => {
   const { data } = await api.get(`/getLyrics.view`, { params: options });
   return data?.lyrics?.value;
 };
+
+export const getLyricsBySongId = async (options: { id: string }) => {
+  const { data } = await api.get(`/getLyricsBySongId.view`, { params: options });
+  const list = data?.lyricsList?.structuredLyrics;
+  if (!list?.length) return null;
+  // Prefer synced lyrics over unsynced
+  return list.find((l: any) => l.synced) || list[0] || null;
+};
