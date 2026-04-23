@@ -6,7 +6,6 @@ import { useHistory } from 'react-router-dom';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import format from 'format-duration';
 import { useTranslation } from 'react-i18next';
-import { ipcRenderer } from 'electron';
 import {
   PlayerContainer,
   PlayerColumn,
@@ -27,6 +26,7 @@ import { SecondaryTextWrapper, StyledButton, StyledRate } from '../shared/styled
 import { Artist, Play, Server, Song } from '../../types';
 import { InfoModal } from '../modal/Modal';
 import useGetLyrics from '../../hooks/useGetLyrics';
+import LyricsModal from './LyricsModal';
 import usePlayerControls from '../../hooks/usePlayerControls';
 import { setSidebar } from '../../redux/configSlice';
 import Popup from '../shared/Popup';
@@ -81,6 +81,7 @@ const PlayerBar = () => {
   useDiscordRpc({ playersRef });
 
   const { data: lyrics } = useGetLyrics(config, {
+    id: playQueue.current?.id,
     artist: playQueue.current?.albumArtist,
     title: playQueue.current?.title,
   });
@@ -97,7 +98,7 @@ const PlayerBar = () => {
 
       return () => clearInterval(interval);
     }
-    return () => clearInterval();
+    return undefined;
   }, [playQueue.currentPlayer, player.status]);
 
   useEffect(() => {
@@ -159,7 +160,7 @@ const PlayerBar = () => {
       return () => clearInterval(interval);
     }
 
-    return () => clearInterval();
+    return undefined;
   }, [
     config.external.obs.enabled,
     config.external.obs.path,
@@ -199,7 +200,6 @@ const PlayerBar = () => {
     setCurrentTime
   );
 
-  // Handle mpris volume change
   useEffect(() => {
     setLocalVolume(Number(playQueue.volume.toPrecision(2)));
   }, [playQueue.volume]);
@@ -219,8 +219,6 @@ const PlayerBar = () => {
       }
       setIsDraggingVolume(false);
     }, 100);
-
-    ipcRenderer.send('volume', localVolume);
 
     return () => clearTimeout(debounce);
   }, [dispatch, isDraggingVolume, localVolume, playQueue.currentPlayer, playQueue.fadeDuration]);
@@ -675,33 +673,49 @@ const PlayerBar = () => {
                       : t('Repeat')
                   }
                 >
-                  <PlayerControlIcon
-                    aria-label={
-                      playQueue.repeat === 'all'
-                        ? t('Repeat all')
-                        : playQueue.repeat === 'one'
-                        ? t('Repeat one')
-                        : t('Repeat')
-                    }
-                    aria-pressed={
-                      playQueue.repeat === 'all' || playQueue.repeat === 'one' ? 'true' : 'false'
-                    }
+                  <span
                     role="button"
                     tabIndex={0}
-                    icon="refresh"
-                    size="lg"
-                    fixedWidth
+                    style={{ position: 'relative', display: 'inline-block' }}
                     onClick={handleRepeat}
                     onKeyDown={(e: any) => {
-                      if (e.key === ' ') {
-                        handleRepeat();
-                      }
+                      if (e.key === ' ') handleRepeat();
                     }}
-                    active={
-                      playQueue.repeat === 'all' || playQueue.repeat === 'one' ? 'true' : 'false'
-                    }
-                    flip={playQueue.repeat === 'one' ? 'horizontal' : undefined}
-                  />
+                  >
+                    <PlayerControlIcon
+                      aria-label={
+                        playQueue.repeat === 'all'
+                          ? t('Repeat all')
+                          : playQueue.repeat === 'one'
+                          ? t('Repeat one')
+                          : t('Repeat')
+                      }
+                      aria-pressed={
+                        playQueue.repeat === 'all' || playQueue.repeat === 'one' ? 'true' : 'false'
+                      }
+                      icon="refresh"
+                      size="lg"
+                      fixedWidth
+                      active={
+                        playQueue.repeat === 'all' || playQueue.repeat === 'one' ? 'true' : 'false'
+                      }
+                    />
+                    {playQueue.repeat === 'one' && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          bottom: 1,
+                          right: 1,
+                          fontSize: '9px',
+                          fontWeight: 'bold',
+                          lineHeight: 1,
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        1
+                      </span>
+                    )}
+                  </span>
                 </CustomTooltip>
                 {/* Shuffle Button */}
                 <CustomTooltip text={t('Shuffle')}>
@@ -799,9 +813,12 @@ const PlayerBar = () => {
           }}
         />
       </InfoModal>
-      <InfoModal width="90vw" show={showLyricsModal} handleHide={() => setShowLyricsModal(false)}>
-        {lyrics}
-      </InfoModal>
+      <LyricsModal
+        show={showLyricsModal}
+        handleHide={() => setShowLyricsModal(false)}
+        lyrics={lyrics}
+        currentTime={currentTime}
+      />
     </Player>
   );
 };

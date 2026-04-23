@@ -21,6 +21,7 @@ import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { setActive } from '../../redux/configSlice';
 import { apiController } from '../../api/controller';
 import ExternalConfig from './ConfigPanels/ExternalConfig';
+import EQConfig from './ConfigPanels/EQConfig';
 import Popup from '../shared/Popup';
 
 const GITHUB_RELEASE_URL = 'https://api.github.com/repos/jeffvli/sonixd/releases?per_page=3';
@@ -76,7 +77,7 @@ const Config = () => {
 
       return () => clearInterval(interval);
     }
-    return () => clearInterval();
+    return undefined;
   }, [config.serverType, isScanning]);
 
   const isLatestRelease = packageJson.version === latestRelease;
@@ -229,6 +230,7 @@ const Config = () => {
         <>
           <PlaybackConfig bordered />
           <PlayerConfig bordered />
+          <EQConfig bordered />
         </>
       )}
 

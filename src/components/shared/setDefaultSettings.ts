@@ -130,6 +130,9 @@ interface Settings {
   defaultWindowHeight: number;
   savedWindowSize: number[];
   savedWindowPos: number[];
+  eqEnabled: boolean;
+  eqGains: number[];
+  eqCustomPresets: Array<{ name: string; gains: number[] }>;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -202,18 +205,18 @@ const DEFAULT_SETTINGS: Settings = {
       serverSide: false,
     },
   },
-  volume: 0.3,
+  volume: 1.0,
   audioDeviceId: null,
   seekForwardInterval: 5,
   seekBackwardInterval: 5,
-  volumeFade: true,
-  repeat: 'all',
+  volumeFade: false,
+  repeat: 'none',
   shuffle: 'false',
   scrollWithCurrentSong: true,
   cacheImages: true,
   cacheSongs: false,
-  pollingInterval: 100,
-  fadeDuration: 9,
+  pollingInterval: 10,
+  fadeDuration: 0,
   fadeType: 'equalPower',
   gridCardSize: 175,
   gridGapSize: 20,
@@ -246,11 +249,14 @@ const DEFAULT_SETTINGS: Settings = {
   miniListRowHeight: '40',
   genreListFontSize: '14',
   genreListRowHeight: '50',
-  retainWindowSize: false,
+  retainWindowSize: true,
   defaultWindowWidth: 1280,
   defaultWindowHeight: 720,
   savedWindowSize: [1280, 720],
   savedWindowPos: [50, 50],
+  eqEnabled: false,
+  eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  eqCustomPresets: [],
   themes: [],
   themesDefault: [
     {
@@ -1733,7 +1739,7 @@ export const setDefaultSettings = (force: boolean) => {
   }
 
   if (force || !settings.has('retainWindowSize')) {
-    settings.set('retainWindowSize', false);
+    settings.set('retainWindowSize', true);
   }
 
   if (force || !settings.has('defaultWindowWidth')) {

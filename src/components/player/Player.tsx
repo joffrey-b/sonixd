@@ -23,11 +23,14 @@ import {
   getNextPlayerIndex,
 } from '../../redux/playQueueSlice';
 import cacheSong from '../shared/cacheSong';
-import { isCached, isLinux } from '../../shared/utils';
+import { isCached } from '../../shared/utils';
 import { apiController } from '../../api/controller';
 import { Artist, Server } from '../../types';
 import { setStatus } from '../../redux/playerSlice';
 import { settings } from '../shared/setDefaultSettings';
+import { EqState } from '../../redux/eqSlice';
+
+const EQ_FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
 const gaplessListenHandler = (
   currentPlayerRef: any,
@@ -255,24 +258,27 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
   const cacheSongs = settings.get('cacheSongs');
   const [title] = useState('');
   const [scrobbled, setScrobbled] = useState(false);
+  const eq = useAppSelector((state: any) => state.eq as EqState);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const filtersRef1 = useRef<BiquadFilterNode[]>([]);
+  const filtersRef2 = useRef<BiquadFilterNode[]>([]);
+  const hiddenAudio1Ref = useRef<HTMLAudioElement | null>(null);
+  const hiddenAudio2Ref = useRef<HTMLAudioElement | null>(null);
 
   const getSrc1 = useCallback(() => {
-    const cachedSongPath = `${misc.imageCachePath}/${
-      playQueue[currentEntryList][playQueue.player1.index]?.id
-    }.mp3`;
-    return isCached(cachedSongPath)
-      ? cachedSongPath
-      : playQueue[currentEntryList][playQueue.player1.index]?.streamUrl;
-  }, [misc.imageCachePath, currentEntryList, playQueue]);
+    const song = playQueue[currentEntryList][playQueue.player1.index];
+    const ext = song?.suffix || 'mp3';
+    const cachedSongPath = `${misc.songCachePath}/${song?.id}.${ext}`;
+    return isCached(cachedSongPath) ? cachedSongPath : song?.streamUrl;
+  }, [misc.songCachePath, currentEntryList, playQueue]);
 
   const getSrc2 = useCallback(() => {
-    const cachedSongPath = `${misc.imageCachePath}/${
-      playQueue[currentEntryList][playQueue.player2.index]?.id
-    }.mp3`;
-    return isCached(cachedSongPath)
-      ? cachedSongPath
-      : playQueue[currentEntryList][playQueue.player2.index]?.streamUrl;
-  }, [misc.imageCachePath, currentEntryList, playQueue]);
+    const song = playQueue[currentEntryList][playQueue.player2.index];
+    const ext = song?.suffix || 'mp3';
+    const cachedSongPath = `${misc.songCachePath}/${song?.id}.${ext}`;
+    return isCached(cachedSongPath) ? cachedSongPath : song?.streamUrl;
+  }, [misc.songCachePath, currentEntryList, playQueue]);
 
   useImperativeHandle(ref, () => ({
     get player1() {
@@ -282,6 +288,97 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       return player2Ref.current;
     },
   }));
+
+  // Build the Web Audio EQ chain once on mount.
+  // audio element → MediaElementSource → 10 BiquadFilters → MediaStreamDestination → hidden <audio>
+  // The hidden <audio> element is where setSinkId is applied (AudioContext.setSinkId not available
+  // in Chromium 108, so we route through a MediaStream to a regular audio element instead).
+  useEffect(() => {
+    const ctx = new AudioContext();
+    ctx.resume().catch(() => {});
+    audioContextRef.current = ctx;
+
+    const buildChain = (
+      audioEl: HTMLAudioElement,
+      filtersRef: React.MutableRefObject<BiquadFilterNode[]>
+    ): HTMLAudioElement => {
+      const source = ctx.createMediaElementSource(audioEl);
+      const filters: BiquadFilterNode[] = EQ_FREQUENCIES.map((freq) => {
+        const f = ctx.createBiquadFilter();
+        f.type = 'peaking';
+        f.frequency.value = freq;
+        f.Q.value = 1.4;
+        f.gain.value = 0;
+        return f;
+      });
+      let prev: AudioNode = source;
+      filters.forEach((f) => {
+        prev.connect(f);
+        prev = f;
+      });
+      const dest = ctx.createMediaStreamDestination();
+      prev.connect(dest);
+      const hidden = new Audio();
+      hidden.srcObject = dest.stream;
+      hidden.play().catch(() => {});
+      filtersRef.current = filters;
+      return hidden;
+    };
+
+    const h1 = buildChain(player1Ref.current.audioEl.current, filtersRef1);
+    const h2 = buildChain(player2Ref.current.audioEl.current, filtersRef2);
+    hiddenAudio1Ref.current = h1;
+    hiddenAudio2Ref.current = h2;
+
+    // Apply initial muted state — the muted useEffect runs after this one, so without this
+    // there is a brief window where hidden elements play unmuted even if muted=true on mount
+    h1.muted = muted;
+    h2.muted = muted;
+
+    // Apply initial gains
+    const initGains = eq.enabled ? eq.gains : Array(10).fill(0);
+    filtersRef1.current.forEach((f, i) => {
+      f.gain.value = initGains[i] ?? 0;
+    });
+    filtersRef2.current.forEach((f, i) => {
+      f.gain.value = initGains[i] ?? 0;
+    });
+
+    // Apply initial audio device
+    const deviceId = config.playback.audioDeviceId || '';
+    if (deviceId) {
+      (h1 as any).setSinkId(deviceId).catch(() => (h1 as any).setSinkId('').catch(() => {}));
+      (h2 as any).setSinkId(deviceId).catch(() => (h2 as any).setSinkId('').catch(() => {}));
+    }
+
+    return () => {
+      h1.pause();
+      h1.srcObject = null;
+      h2.pause();
+      h2.srcObject = null;
+      ctx.close();
+    };
+    // Intentionally runs only on mount — sinkId and gains have dedicated effects below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update BiquadFilter gains when EQ state changes
+  useEffect(() => {
+    if (filtersRef1.current.length === 0) return;
+    const gains = eq.enabled ? eq.gains : Array(10).fill(0);
+    filtersRef1.current.forEach((f, i) => {
+      f.gain.value = gains[i] ?? 0;
+    });
+    filtersRef2.current.forEach((f, i) => {
+      f.gain.value = gains[i] ?? 0;
+    });
+  }, [eq.enabled, eq.gains]);
+
+  // Propagate muted state to the hidden output elements
+  useEffect(() => {
+    if (hiddenAudio1Ref.current) hiddenAudio1Ref.current.muted = muted;
+    if (hiddenAudio2Ref.current) hiddenAudio2Ref.current.muted = muted;
+  }, [muted]);
 
   useEffect(() => {
     if (player.status === 'PLAYING') {
@@ -314,31 +411,6 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
         }
       }, 100);
     }
-  }, [playQueue.currentPlayer, player.status]);
-
-  useEffect(() => {
-    // Since we aren't able to request the time from the main process, we will continuously send it
-    // for mpris-service's getPosition() function
-    if (isLinux()) {
-      const interval = setInterval(() => {
-        if (player.status === 'PLAYING') {
-          ipcRenderer.send(
-            'current-position',
-            playQueue.currentPlayer === 1
-              ? player1Ref.current.audioEl.current.currentTime
-              : player2Ref.current.audioEl.current.currentTime
-          );
-        } else {
-          clearInterval(interval);
-        }
-      }, 500);
-
-      return () => {
-        clearInterval(interval);
-      };
-    }
-
-    return undefined;
   }, [playQueue.currentPlayer, player.status]);
 
   useEffect(() => {
@@ -473,28 +545,32 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
   }, [config.serverType, currentEntryList, dispatch, playQueue, scrobbled]);
 
   function setMetadata(arg: any) {
+    if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: arg.title || 'Unknown Title',
       artist:
         arg.artist?.length !== 0
           ? arg.artist?.map((artist: any) => artist.title).join(', ')
           : 'Unknown Artist',
-      album: 'Unknown Album',
+      album: arg.album || 'Unknown Album',
       artwork: [
         {
-          src: arg.image.includes('placeholder')
+          src: arg.image?.includes('placeholder')
             ? 'https://raw.githubusercontent.com/jeffvli/sonixd/main/src/img/placeholder.png'
-            : arg.image,
+            : arg.image || '',
         },
       ],
     });
+    navigator.mediaSession.playbackState = 'playing';
   }
 
   const handleOnEndedPlayer1 = useCallback(() => {
     player1Ref.current.audioEl.current.currentTime = 0;
     if (cacheSongs) {
       cacheSong(
-        `${playQueue[currentEntryList][playQueue.player1.index].id}.mp3`,
+        `${playQueue[currentEntryList][playQueue.player1.index].id}.${
+          playQueue[currentEntryList][playQueue.player1.index].suffix || 'mp3'
+        }`,
         playQueue[currentEntryList][playQueue.player1.index].streamUrl.replace(/stream/, 'download')
       );
     }
@@ -506,13 +582,9 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       player2Ref.current.audioEl.current.pause();
       player2Ref.current.audioEl.current.currentTime = 0;
 
-      ipcRenderer.send('playpause', {
-        status: 'PAUSED',
-        position:
-          playQueue.currentPlayer === 1
-            ? Math.floor(player1Ref.current.audioEl.current.currentTime * 1000000)
-            : Math.floor(player2Ref.current.audioEl.current.currentTime * 1000000),
-      });
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
 
       setTimeout(() => {
         dispatch(setStatus('PAUSED'));
@@ -538,7 +610,6 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
               playQueue.player1.index
             )
           ];
-        ipcRenderer.send('current-song', nextSong);
         setMetadata(nextSong);
 
         dispatch(setAutoIncremented(false));
@@ -550,7 +621,9 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
     player2Ref.current.audioEl.current.currentTime = 0;
     if (cacheSongs) {
       cacheSong(
-        `${playQueue[currentEntryList][playQueue.player2.index].id}.mp3`,
+        `${playQueue[currentEntryList][playQueue.player2.index].id}.${
+          playQueue[currentEntryList][playQueue.player2.index].suffix || 'mp3'
+        }`,
         playQueue[currentEntryList][playQueue.player2.index].streamUrl.replace(/stream/, 'download')
       );
     }
@@ -561,13 +634,9 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       player2Ref.current.audioEl.current.pause();
       player2Ref.current.audioEl.current.currentTime = 0;
 
-      ipcRenderer.send('playpause', {
-        status: 'PAUSED',
-        position:
-          playQueue.currentPlayer === 1
-            ? Math.floor(player1Ref.current.audioEl.current.currentTime * 1000000)
-            : Math.floor(player2Ref.current.audioEl.current.currentTime * 1000000),
-      });
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
 
       setTimeout(() => {
         dispatch(setStatus('PAUSED'));
@@ -593,7 +662,6 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
               playQueue.player2.index
             )
           ];
-        ipcRenderer.send('current-song', nextSong);
         setMetadata(nextSong);
 
         dispatch(setAutoIncremented(false));
@@ -640,7 +708,6 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
           ? playQueue[currentEntryList][playQueue.player1.index]
           : playQueue[currentEntryList][playQueue.player2.index];
 
-      ipcRenderer.send('current-song', playQueue.current);
       setMetadata(playQueue.current);
 
       // Save the queue 2.5 seconds after fade length
@@ -726,14 +793,31 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
     [config.serverType, currentEntryList, playQueue]
   );
 
+  // Route audio output to the selected device via the hidden audio elements (Option C).
+  // Audio travels: player audio element → Web Audio chain → MediaStream → hidden element → device.
+  // setSinkId on the original player elements would be ignored since audio exits via the chain.
   useEffect(() => {
-    if (config.playback.audioDeviceId) {
-      player1Ref.current.audioEl.current.setSinkId(config.playback.audioDeviceId);
-      player2Ref.current.audioEl.current.setSinkId(config.playback.audioDeviceId);
-    } else {
-      player1Ref.current.audioEl.current.setSinkId('');
-      player2Ref.current.audioEl.current.setSinkId('');
-    }
+    const deviceId = config.playback.audioDeviceId || '';
+    const applySinkId = async () => {
+      const h1 = hiddenAudio1Ref.current;
+      const h2 = hiddenAudio2Ref.current;
+      if (!h1 || !h2) return; // chain not yet set up; initial sinkId applied in setup effect
+      try {
+        await (h1 as any).setSinkId(deviceId);
+        await (h2 as any).setSinkId(deviceId);
+      } catch {
+        try {
+          await (h1 as any).setSinkId('');
+          await (h2 as any).setSinkId('');
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+
+    applySinkId();
+    navigator.mediaDevices.addEventListener('devicechange', applySinkId);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', applySinkId);
   }, [config.playback.audioDeviceId]);
 
   // Reset the player volumes when the track changes

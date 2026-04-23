@@ -10,6 +10,7 @@ import configReducer from './configSlice';
 import favoriteReducer from './favoriteSlice';
 import artistReducer from './artistSlice';
 import viewReducer from './viewSlice';
+import eqReducer from './eqSlice';
 
 export const store: EnhancedStore<
   any,
@@ -27,6 +28,7 @@ export const store: EnhancedStore<
     favorite: favoriteReducer,
     artist: artistReducer,
     view: viewReducer,
+    eq: eqReducer,
   },
   middleware: [forwardToMain],
 });
