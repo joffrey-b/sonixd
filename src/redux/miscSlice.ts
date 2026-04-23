@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { mockSettings } from '../shared/mockSettings';
 import { getImageCachePath, getSongCachePath } from '../shared/utils';
@@ -88,6 +89,23 @@ const initialState: General = {
   highlightOnRowHover: Boolean(parsedSettings.highlightOnRowHover),
   imageCachePath: getImageCachePath(),
   songCachePath: getSongCachePath(),
+  // Ensure cache directories exist on every startup so downloads never fail with ENOENT
+  // before the user has opened Settings → Cache for the first time.
+  ...(() => {
+    if (process.env.NODE_ENV !== 'test') {
+      try {
+        fs.mkdirSync(getImageCachePath(), { recursive: true });
+      } catch {
+        /* ignore */
+      }
+      try {
+        fs.mkdirSync(getSongCachePath(), { recursive: true });
+      } catch {
+        /* ignore */
+      }
+    }
+    return {};
+  })(),
   titleBar: String(parsedSettings.titleBarStyle),
   searchQuery: '',
 };

@@ -18,6 +18,7 @@ import {
   PageHeaderWrapper,
 } from './styled';
 import cacheImage from '../shared/cacheImage';
+import { settings } from '../shared/setDefaultSettings';
 import CustomTooltip from '../shared/CustomTooltip';
 
 const GenericPageHeader = ({
@@ -55,7 +56,7 @@ const GenericPageHeader = ({
               height={imageHeight || '195px'}
               visibleByDefault
               afterLoad={() => {
-                if (cacheImages.enabled) {
+                if (cacheImages.enabled && settings.get('cacheImages')) {
                   cacheImage(
                     `${cacheImages.cacheType}_${cacheImages.id}.jpg`,
                     image.replaceAll(/=150/gi, '=350')

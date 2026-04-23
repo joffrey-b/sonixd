@@ -21,7 +21,7 @@ import { useAppDispatch } from '../../../redux/hooks';
 import Popup from '../../shared/Popup';
 import { settings } from '../../shared/setDefaultSettings';
 
-const fsUtils = require('nodejs-fs-utils');
+import fsUtils from 'nodejs-fs-utils';
 
 const CacheConfig = ({ bordered }: any) => {
   const { t } = useTranslation();
@@ -40,7 +40,7 @@ const CacheConfig = ({ bordered }: any) => {
       setImgCacheSize(Number((fsUtils.fsizeSync(getImageCachePath()) / 1000 / 1000).toFixed(0)));
 
       setSongCacheSize(Number((fsUtils.fsizeSync(getSongCachePath()) / 1000 / 1000).toFixed(0)));
-    } catch (err) {
+    } catch {
       setImgCacheSize(0);
       setSongCacheSize(0);
       fs.mkdirSync(getSongCachePath(), { recursive: true });
@@ -48,61 +48,43 @@ const CacheConfig = ({ bordered }: any) => {
     }
   }, []);
 
-  const handleClearSongCache = () => {
+  const handleClearSongCache = async () => {
     const songCachePath = getSongCachePath();
-    fs.readdir(songCachePath, (err, files) => {
-      if (err) {
-        return notifyToast('error', t('Unable to scan directory: {{err}}', { err }));
-      }
-
-      return files.forEach((file) => {
-        const songPath = path.join(songCachePath, file);
-
-        // Simple validation
-        if (path.extname(songPath) === '.mp3') {
-          fs.unlink(songPath, (error) => {
-            if (err) {
-              return notifyToast('error', t('Unable to clear cache item: {{error}}', { error }));
-            }
-            return null;
-          });
-        }
-      });
-    });
-    notifyToast('success', t('Cleared song cache'));
+    try {
+      const files = await fs.promises.readdir(songCachePath);
+      await Promise.all(
+        files
+          .filter((file) => /\.(mp3|flac|ogg|aac|m4a|wav|opus|wma|ape|alac)$/i.test(file))
+          .map((file) => fs.promises.unlink(path.join(songCachePath, file)))
+      );
+      setSongCacheSize(0);
+      notifyToast('success', t('Cleared song cache'));
+    } catch (err) {
+      notifyToast('error', t('Unable to clear cache: {{err}}', { err }));
+    }
   };
 
-  const handleClearImageCache = (type: 'playlist' | 'album' | 'artist' | 'folder') => {
+  const handleClearImageCache = async (type: 'playlist' | 'album' | 'artist' | 'folder') => {
     const imageCachePath = getImageCachePath();
-    fs.readdir(imageCachePath, (err, files) => {
-      if (err) {
-        return notifyToast('error', t('Unable to scan directory: {{err}}', { err }));
-      }
-
-      const selectedFiles =
-        type === 'playlist'
-          ? files.filter((file) => file.split('_')[0] === 'playlist')
-          : type === 'album'
-          ? files.filter((file) => file.split('_')[0] === 'album')
-          : type === 'folder'
-          ? files.filter((file) => file.split('_')[0] === 'folder')
-          : files.filter((file) => file.split('_')[0] === 'artist');
-
-      return selectedFiles.forEach((file) => {
-        const imagePath = path.join(imageCachePath, file);
-
-        // Simple validation
-        if (path.extname(imagePath) === '.jpg') {
-          fs.unlink(imagePath, (error) => {
-            if (err) {
-              return notifyToast('error', t('Unable to clear cache item: {{error}}', { error }));
-            }
-            return null;
-          });
-        }
-      });
-    });
-    notifyToast('success', t('Cleared {{type}} image cache', { type }));
+    try {
+      const files = await fs.promises.readdir(imageCachePath);
+      // Match both normal cached files (e.g. album_123.jpg) and any stale TEMP files
+      // left by interrupted downloads (e.g. TEMP_album_123.jpg)
+      await Promise.all(
+        files
+          .filter(
+            (file) =>
+              (file.split('_')[0] === type ||
+                (file.split('_')[0] === 'TEMP' && file.split('_')[1] === type)) &&
+              path.extname(file) === '.jpg'
+          )
+          .map((file) => fs.promises.unlink(path.join(imageCachePath, file)))
+      );
+      setImgCacheSize(Number((fsUtils.fsizeSync(imageCachePath) / 1000 / 1000).toFixed(0)));
+      notifyToast('success', t('Cleared {{type}} image cache', { type }));
+    } catch (err) {
+      notifyToast('error', t('Unable to clear cache: {{err}}', { err }));
+    }
   };
 
   return (
@@ -191,10 +173,7 @@ const CacheConfig = ({ bordered }: any) => {
             setCacheSongs(e);
           }}
         >
-          {t('Songs')}{' '}
-          <StyledTag>
-            {songCacheSize} MB {imgCacheSize === 9999999 && t('- Folder not found')}
-          </StyledTag>
+          {t('Songs')} <StyledTag>{songCacheSize} MB</StyledTag>
         </StyledCheckbox>
         <StyledCheckbox
           defaultChecked={cacheImages}
@@ -203,10 +182,7 @@ const CacheConfig = ({ bordered }: any) => {
             setCacheImages(e);
           }}
         >
-          {t('Images')}{' '}
-          <StyledTag>
-            {imgCacheSize} MB {imgCacheSize === 9999999 && t('- Folder not found')}
-          </StyledTag>
+          {t('Images')} <StyledTag>{imgCacheSize} MB</StyledTag>
         </StyledCheckbox>
       </div>
       <br />

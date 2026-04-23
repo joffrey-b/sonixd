@@ -1,5 +1,7 @@
 import React from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
+import cacheImage from '../../shared/cacheImage';
+import { settings } from '../../shared/setDefaultSettings';
 import { isCached } from '../../../shared/utils';
 import { CoverArtWrapper } from '../../layout/styled';
 import { TableCellWrapper } from '../styled';
@@ -58,6 +60,14 @@ const CoverArtCell = ({
           width={rowHeight - 10}
           height={rowHeight - 10}
           visibleByDefault
+          afterLoad={() => {
+            if (cacheImages.enabled && settings.get('cacheImages')) {
+              cacheImage(
+                `${cacheImages.cacheType}_${rowData[cacheImages.cacheIdProperty]}.jpg`,
+                rowData.image.replaceAll(/=150/gi, '=350')
+              );
+            }
+          }}
         />
       </CoverArtWrapper>
     </TableCellWrapper>

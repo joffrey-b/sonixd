@@ -130,7 +130,7 @@ const Dashboard = () => {
                 history.push(`/library/album?sortType=recent`);
               }, 50);
             }}
-            type="music"
+            type="album"
             handleFavorite={(rowData: any) =>
               handleFavorite(rowData, { queryKey: ['recentAlbums', musicFolder.id] })
             }
@@ -214,7 +214,7 @@ const Dashboard = () => {
                 history.push(`/library/album?sortType=frequent`);
               }, 50);
             }}
-            type="music"
+            type="album"
             handleFavorite={(rowData: any) =>
               handleFavorite(rowData, { queryKey: ['frequentAlbums', musicFolder.id] })
             }

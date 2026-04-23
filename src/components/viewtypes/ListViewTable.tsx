@@ -731,7 +731,7 @@ const ListViewTable = ({
                                 height={rowHeight - 10}
                                 visibleByDefault
                                 afterLoad={() => {
-                                  if (cacheImages.enabled) {
+                                  if (cacheImages.enabled && settings.get('cacheImages')) {
                                     cacheImage(
                                       `${cacheImages.cacheType}_${
                                         rowData[cacheImages.cacheIdProperty]

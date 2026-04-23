@@ -197,7 +197,7 @@ const FolderList = () => {
             cacheImages={{
               enabled: settings.get('cacheImages'),
               cacheType: 'folder',
-              cacheIdProperty: 'albumId',
+              cacheIdProperty: 'id',
             }}
             page="folderListPage"
             listType="folder"

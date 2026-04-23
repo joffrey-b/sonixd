@@ -6,6 +6,7 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 import cacheImage from '../shared/cacheImage';
 import { useAppDispatch } from '../../redux/hooks';
 import { isCached } from '../../shared/utils';
+import { settings } from '../shared/setDefaultSettings';
 import {
   CardPanel,
   InfoPanel,
@@ -155,7 +156,7 @@ const Card = ({
                     cardsize={size}
                     visibleByDefault={!notVisibleByDefault}
                     afterLoad={() => {
-                      if (cacheImages) {
+                      if (cacheImages && settings.get('cacheImages')) {
                         cacheImage(
                           `${rest.details.cacheType}_${rest.details.id}.jpg`,
                           rest.coverArt.replaceAll(/=150/gi, '=350')
