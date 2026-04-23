@@ -10,7 +10,8 @@
  */
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
-import Player from 'mpris-service';
+import fs from 'fs';
+import https from 'https';
 import path from 'path';
 import { ipcMain, app, BrowserWindow, shell, globalShortcut, Menu, Tray, dialog } from 'electron';
 import electronLocalshortcut from 'electron-localshortcut';
@@ -19,14 +20,45 @@ import log from 'electron-log';
 import { configureStore } from '@reduxjs/toolkit';
 import { forwardToRenderer, triggerAlias, replayActionMain } from 'electron-redux';
 import playerReducer from './redux/playerSlice';
-import playQueueReducer, { toggleShuffle, toggleRepeat, setVolume } from './redux/playQueueSlice';
+import playQueueReducer from './redux/playQueueSlice';
 import multiSelectReducer from './redux/multiSelectSlice';
 import configReducer from './redux/configSlice';
 import MenuBuilder from './menu';
-import { isWindows, isWindows10, isMacOS, isLinux } from './shared/utils';
+import { isWindows, isMacOS, isLinux } from './shared/utils';
 import { settings, setDefaultSettings } from './components/shared/setDefaultSettings';
 
 setDefaultSettings(false);
+
+let systemCaCerts = null;
+
+// On Linux, Electron uses neither the system CA trust store nor the NSS database
+// for certificate verification — neither the Node.js/axios network stack nor
+// Chromium's audio-streaming stack will trust user-added CAs by default.
+// We fix this by:
+//   1. Setting NODE_EXTRA_CA_CERTS so the renderer's Node.js picks up the system
+//      bundle before the renderer process is spawned (inherited via env).
+//   2. Patching https.globalAgent for the main process, in case TLS was already
+//      loaded by an import before NODE_EXTRA_CA_CERTS could take effect.
+//   3. Storing the bundle for the certificate-error handler below, which covers
+//      Chromium's network stack (audio streaming, cover art, etc.).
+if (isLinux()) {
+  const caBundlePaths = [
+    '/etc/ssl/certs/ca-certificates.crt', // Debian / Ubuntu / Mint
+    '/etc/pki/tls/certs/ca-bundle.crt', // Fedora / RHEL / CentOS
+    '/etc/ssl/ca-bundle.pem', // openSUSE
+    '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem', // Arch Linux
+  ];
+  const bundlePath = caBundlePaths.find((p) => fs.existsSync(p));
+  if (bundlePath) {
+    process.env.NODE_EXTRA_CA_CERTS = bundlePath;
+    try {
+      systemCaCerts = fs.readFileSync(bundlePath);
+      https.globalAgent.options.ca = systemCaCerts;
+    } catch {
+      // Bundle found but unreadable — NODE_EXTRA_CA_CERTS still covers the renderer
+    }
+  }
+}
 
 export const store = configureStore({
   reducer: {
@@ -47,15 +79,18 @@ let forceQuit = false;
 let saved = false;
 
 if (process.env.NODE_ENV === 'production') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
 }
 
 if (process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('electron-debug')();
 }
 
 const installExtensions = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const installer = require('electron-devtools-installer');
   const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
   const extensions = ['REACT_DEVELOPER_TOOLS', 'REDUX_DEVTOOLS'];
@@ -80,14 +115,6 @@ const stop = () => {
   mainWindow.webContents.send('player-stop');
 };
 
-const pause = () => {
-  mainWindow.webContents.send('player-pause');
-};
-
-const play = () => {
-  mainWindow.webContents.send('player-play');
-};
-
 const playPause = () => {
   mainWindow.webContents.send('player-play-pause');
 };
@@ -103,276 +130,6 @@ const previousTrack = () => {
 const quickSave = () => {
   mainWindow.webContents.send('save-queue-state', app.getPath('userData'));
 };
-
-if (isLinux()) {
-  const mprisPlayer = Player({
-    name: 'Sonixd',
-    identity: 'Sonixd',
-    supportedUriSchemes: ['file'],
-    supportedMimeTypes: ['audio/mpeg', 'application/ogg'],
-    supportedInterfaces: ['player'],
-    rate: 1.0,
-    minimumRate: 1.0,
-    maximumRate: 1.0,
-  });
-
-  mprisPlayer.on('quit', () => {
-    process.exit();
-  });
-
-  mprisPlayer.on('stop', () => {
-    stop();
-
-    mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_STOPPED;
-  });
-
-  mprisPlayer.on('pause', () => {
-    pause();
-
-    if (mprisPlayer.playbackStatus === 'Playing') {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PAUSED;
-    }
-
-    const storeValues = store.getState();
-    mainWindow.webContents.send('current-position-request', {
-      currentPlayer: storeValues.playQueue.currentPlayer,
-    });
-  });
-
-  mprisPlayer.on('play', () => {
-    play();
-
-    if (mprisPlayer.playbackStatus !== 'Playing') {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PLAYING;
-    }
-
-    const storeValues = store.getState();
-    mainWindow.webContents.send('current-position-request', {
-      currentPlayer: storeValues.playQueue.currentPlayer,
-    });
-  });
-
-  mprisPlayer.on('playpause', () => {
-    playPause();
-
-    if (mprisPlayer.playbackStatus !== 'Playing') {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PLAYING;
-    } else {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PAUSED;
-    }
-
-    const storeValues = store.getState();
-    mainWindow.webContents.send('current-position-request', {
-      currentPlayer: storeValues.playQueue.currentPlayer,
-    });
-  });
-
-  mprisPlayer.on('next', () => {
-    nextTrack();
-
-    if (mprisPlayer.playbackStatus !== 'Playing') {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PLAYING;
-    }
-  });
-
-  mprisPlayer.on('previous', () => {
-    previousTrack();
-
-    if (mprisPlayer.playbackStatus !== 'Playing') {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PLAYING;
-    }
-  });
-
-  mprisPlayer.on('shuffle', () => {
-    store.dispatch(toggleShuffle());
-    settings.set('shuffle', !settings.get('shuffle'));
-    mprisPlayer.shuffle = Boolean(settings.get('shuffle'));
-  });
-
-  mprisPlayer.on('volume', (event) => {
-    const volume = Math.min(1, Math.max(0, event));
-    store.dispatch(setVolume(volume));
-    settings.set('volume', volume);
-  });
-
-  mprisPlayer.on('loopStatus', () => {
-    const currentRepeat = settings.get('repeat');
-    const newRepeat = currentRepeat === 'none' ? 'all' : currentRepeat === 'all' ? 'one' : 'none';
-    store.dispatch(toggleRepeat());
-
-    mprisPlayer.loopStatus =
-      newRepeat === 'none' ? 'None' : newRepeat === 'all' ? 'Playlist' : 'Track';
-
-    settings.set('repeat', newRepeat);
-  });
-
-  mprisPlayer.on('position', (event) => {
-    const storeValues = store.getState();
-
-    mainWindow.webContents.send('position-request', {
-      position: event.position,
-      currentPlayer: storeValues.playQueue.currentPlayer,
-    });
-  });
-
-  mprisPlayer.on('seek', (event) => {
-    const storeValues = store.getState();
-
-    mainWindow.webContents.send('seek-request', {
-      offset: event,
-      currentPlayer: storeValues.playQueue.currentPlayer,
-    });
-  });
-
-  ipcMain.on('playpause', (_event, arg) => {
-    if (arg.status === 'PLAYING') {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PLAYING;
-    } else {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PAUSED;
-    }
-
-    setTimeout(() => {
-      mprisPlayer.seeked(arg.position);
-    }, 100);
-  });
-
-  ipcMain.on('seeked', (_event, arg) => {
-    // Send the position from Sonixd to MPRIS on manual seek
-    setTimeout(() => {
-      mprisPlayer.seeked(arg);
-    }, 100);
-  });
-
-  ipcMain.on('current-song', (_event, arg) => {
-    if (mprisPlayer.playbackStatus !== 'Playing') {
-      mprisPlayer.playbackStatus = Player.PLAYBACK_STATUS_PLAYING;
-    }
-
-    mprisPlayer.metadata = {
-      'mpris:trackid': arg?.id ? mprisPlayer.objectPath(`track/${arg?.id?.replace('-', '')}`) : '',
-      'mpris:length': arg.duration ? Math.round((arg.duration || 0) * 1e6) : null,
-      'mpris:artUrl': arg.image.includes('placeholder') ? null : arg.image,
-      'xesam:title': arg.title || null,
-      'xesam:album': arg.album || null,
-      'xesam:artist': arg.artist?.length !== 0 ? arg.artist?.map((artist) => artist.title) : null,
-      'xesam:albumArtist': arg.albumArtist ? arg.albumArtist : null,
-      'xesam:discNumber': arg.discNumber ? arg.discNumber : null,
-      'xesam:trackNumber': arg.track ? arg.track : null,
-      'xesam:useCount': arg.playCount ? arg.playCount : null,
-      'xesam:genre':
-        arg.genre.filter((genre) => genre.title).length !== 0
-          ? arg.genre.filter((genre) => genre.title).map((genre) => genre.title)
-          : null,
-    };
-  });
-
-  ipcMain.on('current-position', (e, arg) => {
-    mprisPlayer.getPosition = () => arg * 1e6;
-  });
-
-  ipcMain.on('volume', (e, arg) => {
-    mprisPlayer.volume = Number(arg);
-  });
-}
-
-if (isWindows() && isWindows10()) {
-  const windowsMedia = require('@nodert-win10-au/windows.media');
-  const windowsMediaPlayback = require('@nodert-win10-au/windows.media.playback');
-  const windowsStorageStreams = require('@nodert-win10-au/windows.storage.streams');
-  const windowsFoundation = require('@nodert-win10-au/windows.foundation');
-
-  const Controls = windowsMediaPlayback.BackgroundMediaPlayer.current.systemMediaTransportControls;
-
-  if (settings.get('systemMediaTransportControls')) {
-    Controls.isEnabled = true;
-  } else {
-    Controls.isEnabled = false;
-  }
-
-  ipcMain.on('enableSystemMediaTransportControls', () => {
-    Controls.isEnabled = true;
-  });
-
-  ipcMain.on('disableSystemMediaTransportControls', () => {
-    Controls.isEnabled = false;
-  });
-
-  Controls.isChannelUpEnabled = false;
-  Controls.isChannelDownEnabled = false;
-  Controls.isFastForwardEnabled = false;
-  Controls.isRewindEnabled = false;
-  Controls.isRecordEnabled = false;
-  Controls.isPlayEnabled = true;
-  Controls.isPauseEnabled = true;
-  Controls.isStopEnabled = true;
-  Controls.isNextEnabled = true;
-  Controls.isPreviousEnabled = true;
-
-  Controls.playbackStatus = windowsMedia.MediaPlaybackStatus.closed;
-  Controls.displayUpdater.type = windowsMedia.MediaPlaybackType.music;
-
-  Controls.displayUpdater.musicProperties.title = 'Sonixd';
-  Controls.displayUpdater.musicProperties.artist = 'No Track Playing';
-  Controls.displayUpdater.musicProperties.albumTitle = 'No Album Playing';
-  Controls.displayUpdater.update();
-
-  Controls.on('buttonpressed', (sender, eventArgs) => {
-    switch (eventArgs.button) {
-      case windowsMedia.SystemMediaTransportControlsButton.play:
-        play();
-        Controls.playbackStatus = windowsMedia.MediaPlaybackStatus.playing;
-        break;
-      case windowsMedia.SystemMediaTransportControlsButton.pause:
-        pause();
-        Controls.playbackStatus = windowsMedia.MediaPlaybackStatus.paused;
-        break;
-      case windowsMedia.SystemMediaTransportControlsButton.stop:
-        stop();
-        Controls.playbackStatus = windowsMedia.MediaPlaybackStatus.stopped;
-        break;
-      case windowsMedia.SystemMediaTransportControlsButton.next:
-        nextTrack();
-        break;
-      case windowsMedia.SystemMediaTransportControlsButton.previous:
-        previousTrack();
-        break;
-      default:
-        break;
-    }
-  });
-
-  ipcMain.on('playpause', (_event, arg) => {
-    if (arg.status === 'PLAYING') {
-      Controls.playbackStatus = windowsMedia.MediaPlaybackStatus.playing;
-    } else {
-      Controls.playbackStatus = windowsMedia.MediaPlaybackStatus.paused;
-    }
-  });
-
-  ipcMain.on('current-song', (_event, arg) => {
-    if (Controls.playbackStatus !== windowsMedia.MediaPlaybackStatus.playing) {
-      Controls.playbackStatus = windowsMedia.MediaPlaybackStatus.playing;
-    }
-
-    Controls.displayUpdater.musicProperties.title = arg.title || 'Unknown Title';
-    Controls.displayUpdater.musicProperties.artist =
-      arg.artist?.length !== 0
-        ? arg.artist?.map((artist) => artist.title).join(', ')
-        : 'Unknown Artist';
-    Controls.displayUpdater.musicProperties.albumTitle = arg.album || 'Unknown Album';
-
-    Controls.displayUpdater.thumbnail =
-      windowsStorageStreams.RandomAccessStreamReference.createFromUri(
-        new windowsFoundation.Uri(
-          arg.image.includes('placeholder')
-            ? 'https://raw.githubusercontent.com/jeffvli/sonixd/main/src/img/placeholder.png'
-            : arg.image
-        )
-      );
-
-    Controls.displayUpdater.update();
-  });
-}
 
 const createWinThumbarButtons = () => {
   if (isWindows()) {
@@ -438,13 +195,20 @@ const createWindow = async () => {
     icon: getAssetPath('icon.png'),
     webPreferences: {
       nodeIntegration: true,
-      enableRemoteModule: true,
       contextIsolation: false,
     },
     autoHideMenuBar: true,
     minWidth: 768,
     minHeight: 600,
     frame: settings.get('titleBarStyle') === 'native',
+  });
+
+  electronLocalshortcut.register(mainWindow, 'Ctrl+Shift+I', () => {
+    mainWindow?.webContents.openDevTools();
+  });
+
+  electronLocalshortcut.register(mainWindow, 'F12', () => {
+    mainWindow?.webContents.openDevTools({ mode: 'undocked' });
   });
 
   if (settings.get('globalMediaHotkeys')) {
@@ -608,9 +372,9 @@ const createWindow = async () => {
   menuBuilder.buildMenu();
 
   // Open urls in the user's browser
-  mainWindow.webContents.on('new-window', (event, url) => {
-    event.preventDefault();
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
+    return { action: 'deny' };
   });
 
   // Remove this if your app does not use auto updates
@@ -740,7 +504,54 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService');
+// Re-verify certificates that Chromium rejects using Node.js TLS against the
+// system CA bundle loaded above. This lets user-trusted CAs (e.g. a home router
+// or OPNsense CA) work on Linux without any manual NSS database manipulation.
+// Node.js and Chromium use independent TLS stacks, so this request will not
+// re-trigger the certificate-error event.
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  if (!systemCaCerts) {
+    callback(false);
+    return;
+  }
+
+  event.preventDefault();
+
+  let urlObj;
+  try {
+    urlObj = new URL(url);
+  } catch {
+    callback(false);
+    return;
+  }
+
+  const req = https.request(
+    {
+      host: urlObj.hostname,
+      port: parseInt(urlObj.port, 10) || 443,
+      method: 'HEAD',
+      path: '/',
+      ca: systemCaCerts,
+      rejectUnauthorized: true,
+      timeout: 5000,
+    },
+    () => callback(true)
+  );
+
+  req.on('error', () => callback(false));
+  req.on('timeout', () => {
+    req.destroy();
+    callback(false);
+  });
+
+  try {
+    req.end();
+  } catch {
+    callback(false);
+  }
+});
+
+app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling');
 
 app
   .whenReady()

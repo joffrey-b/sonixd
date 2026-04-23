@@ -1,12 +1,12 @@
 {
-  "name": "sonixd",
+  "name": "sonixd-app",
   "productName": "Sonixd",
-  "version": "0.15.5",
+  "version": "0.16.30",
   "description": "A full-featured Subsonic/Jellyfin compatible desktop client",
   "main": "./main.prod.js",
   "author": {
-    "name": "jeffvli",
-    "url": "https://github.com/jeffvli/sonixd"
+    "name": "joffrey-b",
+    "url": "https://github.com/joffrey-b/sonixd"
   },
   "scripts": {
     "electron-rebuild": "node -r ../.erb/scripts/BabelRegister.js ../.erb/scripts/ElectronRebuild.js",
@@ -14,13 +14,7 @@
   },
   "license": "GPL-3.0",
   "devDependencies": {
-    "electron": "22.3.1"
+    "electron": "34.0.0"
   },
-  "dependencies": {
-    "@nodert-win10-au/windows.foundation": "^0.4.4",
-    "@nodert-win10-au/windows.media": "^0.4.4",
-    "@nodert-win10-au/windows.media.playback": "^0.4.4",
-    "@nodert-win10-au/windows.storage.streams": "^0.4.4",
-    "mpris-service": "^2.1.2"
-  }
+  "dependencies": {}
 }

@@ -74,8 +74,6 @@ const usePlayerControls = (
         playersRef.current.player2.audioEl.current.volume = 0;
         playersRef.current.player2.audioEl.current.pause();
 
-        ipcRenderer.send('seeked', 0);
-
         if (config.serverType === Server.Jellyfin && playQueue.scrobble) {
           apiController({
             serverType: config.serverType,
@@ -96,8 +94,6 @@ const usePlayerControls = (
         playersRef.current.player1.audioEl.current.currentTime = 0;
         playersRef.current.player1.audioEl.current.volume = 0;
         playersRef.current.player1.audioEl.current.pause();
-
-        ipcRenderer.send('seeked', 0);
 
         if (config.serverType === Server.Jellyfin && playQueue.scrobble) {
           apiController({
@@ -121,58 +117,23 @@ const usePlayerControls = (
     if (playQueue[currentEntryList].length > 0) {
       if (player.status === 'PAUSED') {
         navigator.mediaSession.playbackState = 'playing';
-
         dispatch(setStatus('PLAYING'));
-
-        ipcRenderer.send('playpause', {
-          status: 'PLAYING',
-          position:
-            playQueue.currentPlayer === 1
-              ? Math.floor(playersRef.current.player1.audioEl.current.currentTime * 1000000)
-              : Math.floor(playersRef.current.player2.audioEl.current.currentTime * 1000000),
-        });
       } else {
         navigator.mediaSession.playbackState = 'paused';
-
         dispatch(setStatus('PAUSED'));
-        ipcRenderer.send('playpause', {
-          status: 'PAUSED',
-          position:
-            playQueue.currentPlayer === 1
-              ? Math.floor(playersRef.current.player1.audioEl.current.currentTime * 1000000)
-              : Math.floor(playersRef.current.player2.audioEl.current.currentTime * 1000000),
-        });
       }
     }
-  }, [currentEntryList, dispatch, playQueue, player.status, playersRef]);
+  }, [currentEntryList, dispatch, playQueue, player.status]);
 
   const handlePlay = useCallback(() => {
     navigator.mediaSession.playbackState = 'playing';
-
-    ipcRenderer.send('playpause', {
-      status: 'PLAYING',
-      position:
-        playQueue.currentPlayer === 1
-          ? Math.floor(playersRef.current.player1.audioEl.current.currentTime * 1000000)
-          : Math.floor(playersRef.current.player2.audioEl.current.currentTime * 1000000),
-    });
-
     dispatch(setStatus('PLAYING'));
-  }, [dispatch, playQueue.currentPlayer, playersRef]);
+  }, [dispatch]);
 
   const handlePause = useCallback(() => {
     navigator.mediaSession.playbackState = 'paused';
-
-    ipcRenderer.send('playpause', {
-      status: 'PAUSED',
-      position:
-        playQueue.currentPlayer === 1
-          ? Math.floor(playersRef.current.player1.audioEl.current.currentTime * 1000000)
-          : Math.floor(playersRef.current.player2.audioEl.current.currentTime * 1000000),
-    });
-
     dispatch(setStatus('PAUSED'));
-  }, [dispatch, playQueue.currentPlayer, playersRef]);
+  }, [dispatch]);
 
   const handleStop = useCallback(() => {
     playersRef.current.player2.audioEl.current.pause();
@@ -182,11 +143,6 @@ const usePlayerControls = (
     setCurrentTime(0);
 
     navigator.mediaSession.playbackState = 'paused';
-
-    ipcRenderer.send('playpause', {
-      status: 'PAUSED',
-      position: 0,
-    });
 
     setTimeout(() => {
       dispatch(setStatus('PAUSED'));
@@ -211,13 +167,11 @@ const usePlayerControls = (
           playersRef.current.player1.audioEl.current.currentTime - seekBackwardInterval;
         playersRef.current.player1.audioEl.current.currentTime = newTime;
         setCurrentTime(newTime);
-        ipcRenderer.send('seeked', newTime * 1000000);
       } else {
         const newTime =
           playersRef.current.player2.audioEl.current.currentTime - seekBackwardInterval;
         playersRef.current.player2.audioEl.current.currentTime = newTime;
         setCurrentTime(newTime);
-        ipcRenderer.send('seeked', newTime * 1000000);
       }
     }
   }, [currentEntryList, playQueue, playersRef, setCurrentTime]);
@@ -242,22 +196,18 @@ const usePlayerControls = (
         const newTime = check > songDuration ? songDuration - 1 : check;
         playersRef.current.player1.audioEl.current.currentTime = newTime;
         setCurrentTime(newTime);
-        ipcRenderer.send('seeked', newTime * 1000000);
       } else {
         const check = playersRef.current.player2.audioEl.current.currentTime + seekForwardInterval;
         const songDuration = playersRef.current.player2.audioEl.current.duration;
         const newTime = check > songDuration ? songDuration - 1 : check;
         playersRef.current.player2.audioEl.current.currentTime = newTime;
         setCurrentTime(newTime);
-        ipcRenderer.send('seeked', newTime * 1000000);
       }
     }
   }, [currentEntryList, playQueue, playersRef, setCurrentTime]);
 
   const handleSeekSlider = useCallback(
     (e: number | any) => {
-      ipcRenderer.send('seeked', e * 1000000);
-
       // If trying to seek back while fading to the next track, we need to
       // pause and reset the next track so that they don't begin overlapping
       if (playQueue.isFading) {
@@ -281,13 +231,24 @@ const usePlayerControls = (
     [playQueue.currentPlayer, playQueue.isFading, playersRef, setCurrentTime]
   );
 
+  const handleSeekTo = useCallback(
+    (seekTime: number) => {
+      if (playQueue.currentPlayer === 1) {
+        playersRef.current.player1.audioEl.current.currentTime = seekTime;
+      } else {
+        playersRef.current.player2.audioEl.current.currentTime = seekTime;
+      }
+      setCurrentTime(seekTime);
+    },
+    [playQueue.currentPlayer, playersRef, setCurrentTime]
+  );
+
   const handleVolumeSlider = (e: number) => {
     if (!isDraggingVolume) {
       setIsDraggingVolume(true);
     }
     const vol = Number((e / 100).toFixed(2));
     setLocalVolume(vol);
-    ipcRenderer.send('volume', vol);
   };
 
   const handleVolumeKey = useCallback(
@@ -296,12 +257,10 @@ const usePlayerControls = (
         const vol = Number((playQueue.volume + 0.05 > 1 ? 1 : playQueue.volume + 0.05).toFixed(2));
         setLocalVolume(vol);
         dispatch(setVolume(vol));
-        ipcRenderer.send('volume', vol);
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
         const vol = Number((playQueue.volume - 0.05 < 0 ? 0 : playQueue.volume - 0.05).toFixed(2));
         setLocalVolume(vol);
         dispatch(setVolume(vol));
-        ipcRenderer.send('volume', vol);
       }
     },
     [dispatch, playQueue.volume, setLocalVolume]
@@ -317,13 +276,11 @@ const usePlayerControls = (
         vol = vol < 0 ? 0 : vol;
         setLocalVolume(vol);
         dispatch(setVolume(vol));
-        ipcRenderer.send('volume', vol);
       } else {
         let vol = Number((playQueue.volume + 0.01).toFixed(2));
         vol = vol > 1 ? 1 : vol;
         setLocalVolume(vol);
         dispatch(setVolume(vol));
-        ipcRenderer.send('volume', vol);
       }
     },
     [dispatch, isDraggingVolume, playQueue.volume, setIsDraggingVolume, setLocalVolume]
@@ -509,54 +466,28 @@ const usePlayerControls = (
     media.setActionHandler('previoustrack', () => {
       handlePrevTrack();
     });
-  }, [handlePlay, handlePause, handleStop, handleNextTrack, handlePrevTrack]);
 
-  useEffect(() => {
-    ipcRenderer.on('current-position-request', (_event, arg) => {
-      if (arg.currentPlayer === 1) {
-        ipcRenderer.send(
-          'seeked',
-          Math.floor(playersRef.current.player1.audioEl.current.currentTime * 1000000)
-        );
-      } else {
-        ipcRenderer.send(
-          'seeked',
-          Math.floor(playersRef.current.player2.audioEl.current.currentTime * 1000000)
-        );
-      }
+    media.setActionHandler('seekbackward', () => {
+      handleSeekBackward();
     });
 
-    ipcRenderer.on('position-request', (_event, arg) => {
-      const newPosition = Math.floor(arg.position / 1000000);
-
-      if (arg.currentPlayer === 1) {
-        playersRef.current.player1.audioEl.current.currentTime = newPosition;
-      } else {
-        playersRef.current.player2.audioEl.current.currentTime = newPosition;
-      }
-
-      ipcRenderer.send('seeked', arg.position);
+    media.setActionHandler('seekforward', () => {
+      handleSeekForward();
     });
 
-    ipcRenderer.on('seek-request', (_event, arg) => {
-      let newPosition;
-      if (arg.currentPlayer === 1) {
-        newPosition = playersRef.current.player1.audioEl.current.currentTime + arg.offset / 1000000;
-        setCurrentTime(newPosition);
-        ipcRenderer.send('seeked', newPosition * 1000000);
-      } else {
-        newPosition = playersRef.current.player2.audioEl.current.currentTime + arg.offset / 1000000;
-        setCurrentTime(newPosition);
-        ipcRenderer.send('seeked', newPosition * 1000000);
-      }
+    media.setActionHandler('seekto', ({ seekTime }) => {
+      if (seekTime !== undefined) handleSeekTo(seekTime);
     });
-
-    return () => {
-      ipcRenderer.removeAllListeners('current-position-request');
-      ipcRenderer.removeAllListeners('position-request');
-      ipcRenderer.removeAllListeners('seek-request');
-    };
-  }, [playersRef, setCurrentTime]);
+  }, [
+    handlePlay,
+    handlePause,
+    handleStop,
+    handleNextTrack,
+    handlePrevTrack,
+    handleSeekBackward,
+    handleSeekForward,
+    handleSeekTo,
+  ]);
 
   return {
     handleNextTrack,

@@ -21,16 +21,22 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: '14.18.0'
+          node-version: '20.x'
+          cache: 'yarn'
 
       - name: yarn install
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
         run: |
           yarn install --frozen-lockfile --network-timeout 300000 --network-concurrency 1
+
+      - name: Download Electron binary
+        run: node node_modules/electron/install.js
 
       - name: yarn test
         env:

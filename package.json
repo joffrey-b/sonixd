@@ -44,7 +44,7 @@
       "img/"
     ],
     "afterSign": ".erb/scripts/Notarize.js",
-    "electronVersion": "22.3.1",
+    "electronVersion": "34.0.0",
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
@@ -100,29 +100,29 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "jeffvli",
+      "owner": "joffrey-b",
       "repo": "sonixd"
     }
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jeffvli/sonixd.git"
+    "url": "git+https://github.com/joffrey-b/sonixd.git"
   },
   "author": {
-    "name": "jeffvli",
-    "url": "https://github.com/jeffvli/"
+    "name": "joffrey-b",
+    "url": "https://github.com/joffrey-b/"
   },
   "contributors": [],
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/jeffvli/sonixd/issues"
+    "url": "https://github.com/joffrey-b/sonixd/issues"
   },
   "keywords": [
     "electron",
     "react",
     "typescript"
   ],
-  "homepage": "https://github.com/jeffvli/sonixd#readme",
+  "homepage": "https://github.com/joffrey-b/sonixd#readme",
   "jest": {
     "testEnvironmentOptions": {
       "url": "http://localhost/"
@@ -183,7 +183,7 @@
     "@types/jest": "^26.0.15",
     "@types/lodash": "^4.14.172",
     "@types/md5": "^2.3.1",
-    "@types/node": "14.18.0",
+    "@types/node": "^20.0.0",
     "@types/randomstring": "^1.1.7",
     "@types/react": "^18.0.2",
     "@types/react-dom": "^18.0.2",
@@ -199,8 +199,8 @@
     "@types/redux-mock-store": "^1.0.3",
     "@types/styled-components": "^5.1.14",
     "@types/webpack-env": "^1.15.2",
-    "@typescript-eslint/eslint-plugin": "^4.8.1",
-    "@typescript-eslint/parser": "^4.8.1",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
     "babel-jest": "^26.1.0",
     "babel-loader": "^8.2.2",
     "babel-plugin-dev-expression": "^0.2.2",
@@ -213,18 +213,18 @@
     "css-loader": "^5.0.1",
     "css-minimizer-webpack-plugin": "^3.4.1",
     "detect-port": "^1.3.0",
-    "electron": "22.3.1",
-    "electron-builder": "^24.0.0-alpha.13",
+    "electron": "34.0.0",
+    "electron-builder": "^25.0.0",
     "electron-devtools-installer": "git+https://github.com/MarshallOfSound/electron-devtools-installer.git",
-    "eslint": "^7.5.0",
+    "eslint": "^8.0.0",
     "eslint-config-airbnb": "^18.2.0",
-    "eslint-config-airbnb-typescript": "^12.0.0",
+    "eslint-config-airbnb-typescript": "^18.0.0",
     "eslint-config-erb": "^2.0.0",
-    "eslint-config-prettier": "^6.11.0",
+    "eslint-config-prettier": "^8.0.0",
     "eslint-import-resolver-webpack": "^0.13.0",
     "eslint-plugin-compat": "^3.8.0",
-    "eslint-plugin-import": "^2.22.0",
-    "eslint-plugin-jest": "^24.1.3",
+    "eslint-plugin-import": "^2.27.0",
+    "eslint-plugin-jest": "^27.0.0",
     "eslint-plugin-jsx-a11y": "6.4.1",
     "eslint-plugin-prettier": "^3.1.4",
     "eslint-plugin-promise": "^4.2.1",
@@ -248,7 +248,7 @@
     "style-loader": "^2.0.0",
     "terser-webpack-plugin": "^5.0.3",
     "tsc-silent": "^1.2.1",
-    "typescript": "^4.0.5 < 4.6.0",
+    "typescript": "^5.0.0",
     "url-loader": "^4.1.0",
     "webpack": "^5.5.1",
     "webpack-bundle-analyzer": "^4.1.0",
@@ -269,7 +269,7 @@
     "electron-log": "^4.2.4",
     "electron-redux": "^1.5.4",
     "electron-store": "^8.1.0",
-    "electron-updater": "^4.3.4",
+    "electron-updater": "^6.1.0",
     "fast-average-color": "^7.0.1",
     "format-duration": "^1.4.0",
     "history": "^5.0.0",
