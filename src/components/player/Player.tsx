@@ -29,6 +29,7 @@ import { Artist, Server } from '../../types';
 import { setStatus } from '../../redux/playerSlice';
 import { settings } from '../shared/setDefaultSettings';
 import { EqState } from '../../redux/eqSlice';
+import { PeqBand, PeqState } from '../../redux/peqSlice';
 
 const EQ_FREQUENCIES = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
@@ -259,10 +260,13 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
   const [title] = useState('');
   const [scrobbled, setScrobbled] = useState(false);
   const eq = useAppSelector((state: any) => state.eq as EqState);
+  const peq = useAppSelector((state: any) => state.peq as PeqState);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const filtersRef1 = useRef<BiquadFilterNode[]>([]);
   const filtersRef2 = useRef<BiquadFilterNode[]>([]);
+  const peqFiltersRef1 = useRef<BiquadFilterNode[]>([]);
+  const peqFiltersRef2 = useRef<BiquadFilterNode[]>([]);
   const hiddenAudio1Ref = useRef<HTMLAudioElement | null>(null);
   const hiddenAudio2Ref = useRef<HTMLAudioElement | null>(null);
 
@@ -289,8 +293,23 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
     },
   }));
 
+  const applyPeqBand = (filter: BiquadFilterNode, band: PeqBand, peqEnabled: boolean) => {
+    if (!peqEnabled || !band.enabled) {
+      // Transparent: peaking at 0 dB has no effect and no phase shift
+      filter.type = 'peaking';
+      filter.frequency.value = 1000;
+      filter.gain.value = 0;
+      filter.Q.value = 1;
+      return;
+    }
+    filter.type = band.type;
+    filter.frequency.value = band.freq;
+    filter.Q.value = band.q;
+    filter.gain.value = band.gain;
+  };
+
   // Build the Web Audio EQ chain once on mount.
-  // audio element → MediaElementSource → 10 BiquadFilters → MediaStreamDestination → hidden <audio>
+  // audio element → MediaElementSource → 10 graphic EQ BiquadFilters → 6 PEQ BiquadFilters → MediaStreamDestination → hidden <audio>
   // The hidden <audio> element is where setSinkId is applied (AudioContext.setSinkId not available
   // in Chromium 108, so we route through a MediaStream to a regular audio element instead).
   useEffect(() => {
@@ -300,7 +319,8 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
 
     const buildChain = (
       audioEl: HTMLAudioElement,
-      filtersRef: React.MutableRefObject<BiquadFilterNode[]>
+      filtersRef: React.MutableRefObject<BiquadFilterNode[]>,
+      peqFiltersRef: React.MutableRefObject<BiquadFilterNode[]>
     ): HTMLAudioElement => {
       const source = ctx.createMediaElementSource(audioEl);
       const filters: BiquadFilterNode[] = EQ_FREQUENCIES.map((freq) => {
@@ -316,17 +336,28 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
         prev.connect(f);
         prev = f;
       });
+      // Chain 6 parametric EQ filters after the graphic EQ
+      const peqFilters: BiquadFilterNode[] = peq.bands.map((band) => {
+        const f = ctx.createBiquadFilter();
+        applyPeqBand(f, band, peq.enabled);
+        return f;
+      });
+      peqFilters.forEach((f) => {
+        prev.connect(f);
+        prev = f;
+      });
       const dest = ctx.createMediaStreamDestination();
       prev.connect(dest);
       const hidden = new Audio();
       hidden.srcObject = dest.stream;
       hidden.play().catch(() => {});
       filtersRef.current = filters;
+      peqFiltersRef.current = peqFilters;
       return hidden;
     };
 
-    const h1 = buildChain(player1Ref.current.audioEl.current, filtersRef1);
-    const h2 = buildChain(player2Ref.current.audioEl.current, filtersRef2);
+    const h1 = buildChain(player1Ref.current.audioEl.current, filtersRef1, peqFiltersRef1);
+    const h2 = buildChain(player2Ref.current.audioEl.current, filtersRef2, peqFiltersRef2);
     hiddenAudio1Ref.current = h1;
     hiddenAudio2Ref.current = h2;
 
@@ -373,6 +404,18 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       f.gain.value = gains[i] ?? 0;
     });
   }, [eq.enabled, eq.gains]);
+
+  // Update PEQ BiquadFilters when PEQ state changes
+  useEffect(() => {
+    if (peqFiltersRef1.current.length === 0) return;
+    peqFiltersRef1.current.forEach((f, i) => {
+      if (peq.bands[i]) applyPeqBand(f, peq.bands[i], peq.enabled);
+    });
+    peqFiltersRef2.current.forEach((f, i) => {
+      if (peq.bands[i]) applyPeqBand(f, peq.bands[i], peq.enabled);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peq.enabled, peq.bands]);
 
   // Propagate muted state to the hidden output elements
   useEffect(() => {

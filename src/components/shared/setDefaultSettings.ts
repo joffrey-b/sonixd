@@ -133,6 +133,14 @@ interface Settings {
   eqEnabled: boolean;
   eqGains: number[];
   eqCustomPresets: Array<{ name: string; gains: number[] }>;
+  peqEnabled: boolean;
+  peqBands: Array<{
+    enabled: boolean;
+    type: 'peaking' | 'lowshelf' | 'highshelf' | 'lowpass' | 'highpass' | 'notch';
+    freq: number;
+    gain: number;
+    q: number;
+  }>;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -257,6 +265,15 @@ const DEFAULT_SETTINGS: Settings = {
   eqEnabled: false,
   eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   eqCustomPresets: [],
+  peqEnabled: false,
+  peqBands: [
+    { enabled: true, type: 'peaking', freq: 80, gain: 0, q: 1.0 },
+    { enabled: true, type: 'peaking', freq: 250, gain: 0, q: 1.0 },
+    { enabled: true, type: 'peaking', freq: 1000, gain: 0, q: 1.0 },
+    { enabled: true, type: 'peaking', freq: 4000, gain: 0, q: 1.0 },
+    { enabled: true, type: 'peaking', freq: 8000, gain: 0, q: 1.0 },
+    { enabled: true, type: 'peaking', freq: 16000, gain: 0, q: 1.0 },
+  ],
   themes: [],
   themesDefault: [
     {
