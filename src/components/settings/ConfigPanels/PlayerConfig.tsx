@@ -92,14 +92,28 @@ const PlayerConfig = ({ bordered }: any) => {
   }, [config.playback.filters]);
 
   useEffect(() => {
-    const getAudioDevices = () => {
+    const refreshAudioDevices = () => {
       getAudioDevice()
-        .then((dev) => setAudioDevices(dev))
+        .then((dev) => {
+          setAudioDevices(dev);
+          if (
+            config.playback.audioDeviceId &&
+            !dev.find((d) => d.deviceId === config.playback.audioDeviceId)
+          ) {
+            notifyToast(
+              'warning',
+              t('Selected audio device is no longer available. Using system default.')
+            );
+          }
+          return null;
+        })
         .catch(() => notifyToast('error', t('Error fetching audio devices')));
     };
 
-    getAudioDevices();
-  }, [t]);
+    refreshAudioDevices();
+    navigator.mediaDevices.addEventListener('devicechange', refreshAudioDevices);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', refreshAudioDevices);
+  }, [t, config.playback.audioDeviceId]);
 
   return (
     <ConfigPanel bordered={bordered} header={t('Player')}>
@@ -343,7 +357,7 @@ const PlayerConfig = ({ bordered }: any) => {
                 try {
                   // eslint-disable-next-line no-new
                   new RegExp(e);
-                } catch (err) {
+                } catch {
                   isValid = false;
                 }
 

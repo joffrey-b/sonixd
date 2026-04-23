@@ -116,7 +116,7 @@ const MusicList = () => {
       // Due to extensive fetch times without pagination, we want to cache for the entire session
       cacheTime: view.music.pagination.recordsPerPage !== 0 ? 600000 : Infinity,
       staleTime: view.music.pagination.recordsPerPage !== 0 ? 600000 : Infinity,
-      enabled: currentQueryKey !== ['musicList'] && musicFolder.loaded,
+      enabled: musicFolder.loaded,
     }
   );
 

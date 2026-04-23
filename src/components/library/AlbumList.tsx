@@ -142,7 +142,7 @@ const AlbumList = () => {
         view.album.pagination.recordsPerPage !== 0 && config.serverType === Server.Jellyfin
           ? 600000
           : Infinity,
-      enabled: currentQueryKey !== ['albumList'] && musicFolder.loaded,
+      enabled: musicFolder.loaded,
     }
   );
 

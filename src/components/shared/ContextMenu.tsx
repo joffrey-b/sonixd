@@ -557,7 +557,7 @@ export const GlobalContextMenu = () => {
           playlistSuccessToast(multiSelect.selected.length, localSelectedPlaylistId);
         }
       }
-    } catch (err) {
+    } catch {
       notifyToast('error', t('Error adding to playlist'));
     } finally {
       dispatch(removeProcessingPlaylist(localSelectedPlaylistId));

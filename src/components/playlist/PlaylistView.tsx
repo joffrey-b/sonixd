@@ -226,7 +226,7 @@ const PlaylistView = ({ ...rest }) => {
             active: true,
           });
         }
-      } catch (err) {
+      } catch {
         notifyToast('error', t('Errored while saving playlist'));
         const playlistData = recovery
           ? JSON.parse(fs.readFileSync(recoveryPath, { encoding: 'utf-8' }))

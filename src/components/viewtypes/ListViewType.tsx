@@ -164,7 +164,7 @@ const ListViewType = (
 
       return () => clearInterval(interval);
     }
-    return () => clearInterval();
+    return undefined;
   }, [dragDirection, dragSpeed, isDragging]);
 
   useEffect(() => {

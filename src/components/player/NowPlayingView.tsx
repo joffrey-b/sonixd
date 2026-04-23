@@ -77,7 +77,7 @@ const NowPlayingView = () => {
   const [randomPlaylistGenre, setRandomPlaylistGenre] = useState<string | undefined>(undefined);
   const [isLoadingRandom, setIsLoadingRandom] = useState(false);
   const [musicFolder, setMusicFolder] = useState(folder.musicFolder);
-  const [infoMode, setInfoMode] = useState(settings.get('infoMode' || false));
+  const [infoMode, setInfoMode] = useState(settings.get('infoMode') ?? false);
 
   const { data: musicFolders } = useQuery(['musicFolders'], () =>
     apiController({ serverType: config.serverType, endpoint: 'getMusicFolders' })

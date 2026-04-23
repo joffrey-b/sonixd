@@ -60,7 +60,8 @@ export type APIEndpoints =
   | 'getSongs'
   | 'getTopSongs'
   | 'getSongsByGenre'
-  | 'getLyrics';
+  | 'getLyrics'
+  | 'getLyricsBySongId';
 
 export interface GenericItem {
   id: string;
