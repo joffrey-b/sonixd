@@ -36,6 +36,7 @@ export interface PlayQueue {
   fadeType: string;
   pollingInterval: number;
   volumeFade: boolean;
+  preservePlayNextOrder: boolean;
   currentIndex: number;
   currentSongId: string;
   currentSongUniqueId: string;
@@ -93,6 +94,7 @@ const initialState: PlayQueue = {
   fadeType: String(parsedSettings.fadeType),
   pollingInterval: Number(parsedSettings.pollingInterval),
   volumeFade: Boolean(parsedSettings.volumeFade),
+  preservePlayNextOrder: Boolean(parsedSettings.preservePlayNextOrder),
   currentIndex: 0,
   currentSongId: '',
   currentSongUniqueId: '',
@@ -268,6 +270,9 @@ const playQueueSlice = createSlice({
           break;
         case 'volumeFade':
           state.volumeFade = action.payload.value;
+          break;
+        case 'preservePlayNextOrder':
+          state.preservePlayNextOrder = action.payload.value;
           break;
         case 'showDebugWindow':
           state.showDebugWindow = action.payload.value;
@@ -764,7 +769,7 @@ const playQueueSlice = createSlice({
 
     appendPlayQueue: (
       state,
-      action: PayloadAction<{ entries: Song[]; type: 'next' | 'later' }>
+      action: PayloadAction<{ entries: Song[]; type: 'next' | 'later'; preserveOrder?: boolean }>
     ) => {
       const isEmptyQueue = state.entry.length < 1;
       // We'll need to update the uniqueId otherwise selecting a song with duplicates
@@ -773,6 +778,7 @@ const playQueueSlice = createSlice({
         return {
           ...entry,
           uniqueId: nanoid(),
+          playNextBlock: action.payload.type === 'next' ? true : undefined,
         };
       });
 
@@ -780,10 +786,20 @@ const playQueueSlice = createSlice({
         refreshedEntries.map((entry: any) => state.entry.push(entry));
       } else {
         const currentSongIndex = getCurrentEntryIndexByUID(state.entry, state.currentSongUniqueId);
+        let insertIndex = currentSongIndex + 1;
+        if (action.payload.preserveOrder) {
+          // Advance past any entries already in the "play next" block
+          while (
+            insertIndex < state.entry.length &&
+            (state.entry[insertIndex] as any).playNextBlock
+          ) {
+            insertIndex += 1;
+          }
+        }
         state.entry = [
-          ...state.entry.slice(0, currentSongIndex + 1),
+          ...state.entry.slice(0, insertIndex),
           ...refreshedEntries,
-          ...state.entry.slice(currentSongIndex + 1),
+          ...state.entry.slice(insertIndex),
         ];
       }
 
@@ -800,10 +816,19 @@ const playQueueSlice = createSlice({
         if (action.payload.type === 'later') {
           shuffledEntries.map((entry: any) => state.shuffledEntry.push(entry));
         } else {
+          let shuffleInsertIndex = state.currentIndex + 1;
+          if (action.payload.preserveOrder) {
+            while (
+              shuffleInsertIndex < state.shuffledEntry.length &&
+              (state.shuffledEntry[shuffleInsertIndex] as any).playNextBlock
+            ) {
+              shuffleInsertIndex += 1;
+            }
+          }
           state.shuffledEntry = [
-            ...state.shuffledEntry.slice(0, state.currentIndex + 1),
+            ...state.shuffledEntry.slice(0, shuffleInsertIndex),
             ...shuffledEntries,
-            ...state.shuffledEntry.slice(state.currentIndex + 1),
+            ...state.shuffledEntry.slice(shuffleInsertIndex),
           ];
         }
       } else if (isEmptyQueue) {

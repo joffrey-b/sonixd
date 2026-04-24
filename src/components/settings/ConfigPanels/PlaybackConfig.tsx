@@ -20,6 +20,9 @@ const PlaybackConfig = ({ bordered }: any) => {
   const [crossfadeDuration, setCrossfadeDuration] = useState(Number(settings.get('fadeDuration')));
   const [pollingInterval, setPollingInterval] = useState(Number(settings.get('pollingInterval')));
   const [volumeFade, setVolumeFade] = useState(Boolean(settings.get('volumeFade')));
+  const [preservePlayNextOrder, setPreservePlayNextOrder] = useState(
+    Boolean(settings.get('preservePlayNextOrder'))
+  );
   const crossfadePickerContainerRef = useRef(null);
 
   const handleSetCrossfadeDuration = (e: number) => {
@@ -153,6 +156,25 @@ const PlaybackConfig = ({ bordered }: any) => {
               checked={volumeFade}
               disabled={crossfadeDuration === 0}
               onChange={(e: boolean) => handleSetVolumeFade(e)}
+            />
+          }
+        />
+
+        <ConfigOption
+          name={t('Preserve Play Next Order')}
+          description={t(
+            'When enabled, songs added via "Play Next" are queued in the order they were added. When disabled, each "Play Next" inserts at the top of the queue.'
+          )}
+          option={
+            <StyledToggle
+              size="md"
+              defaultChecked={preservePlayNextOrder}
+              checked={preservePlayNextOrder}
+              onChange={(e: boolean) => {
+                setPreservePlayNextOrder(e);
+                settings.set('preservePlayNextOrder', e);
+                dispatch(setPlaybackSetting({ setting: 'preservePlayNextOrder', value: e }));
+              }}
             />
           }
         />
