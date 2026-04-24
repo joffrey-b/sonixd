@@ -14,6 +14,7 @@ export const mockSettings = {
   seekForwardInterval: 5,
   seekBackwardInterval: 5,
   volumeFade: true,
+  preservePlayNextOrder: true,
   repeat: 'all',
   shuffle: false,
   scrollWithCurrentSong: true,

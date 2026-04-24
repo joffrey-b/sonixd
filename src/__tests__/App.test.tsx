@@ -60,6 +60,7 @@ const playQueueState: PlayQueue = {
   fadeType: 'equalPower',
   pollingInterval: 5,
   volumeFade: false,
+  preservePlayNextOrder: true,
   currentIndex: 0,
   currentSongId: '',
   currentSongUniqueId: '',
