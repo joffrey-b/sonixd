@@ -15,7 +15,7 @@ import {
   LinkButton,
   CoverArtContainer,
 } from './styled';
-import { setVolume } from '../../redux/playQueueSlice';
+import { setVolume, setStopAfterCurrent } from '../../redux/playQueueSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import Player from './Player';
 import CustomTooltip from '../shared/CustomTooltip';
@@ -53,6 +53,7 @@ const PlayerBar = () => {
   const [muted, setMuted] = useState(false);
   const [showCoverArtModal, setShowCoverArtModal] = useState(false);
   const [showLyricsModal, setShowLyricsModal] = useState(false);
+  const [sleepTimerSeconds, setSleepTimerSeconds] = useState<number | null>(null);
   const [isLoadingRandom, setIsLoadingRandom] = useState(false);
   const { handlePlayQueueAdd } = usePlayQueueHandler();
   const songDuration = useMemo(
@@ -234,6 +235,29 @@ const PlayerBar = () => {
 
   const { handleFavorite } = useFavorite();
   const { handleRating } = useRating();
+
+  useEffect(() => {
+    if (sleepTimerSeconds === null) return undefined;
+    if (sleepTimerSeconds <= 0) {
+      if (player.status === 'PLAYING') handlePlayPause();
+      setSleepTimerSeconds(null);
+      return undefined;
+    }
+    const timeout = setTimeout(
+      () => setSleepTimerSeconds((s) => (s !== null && s > 0 ? s - 1 : null)),
+      1000
+    );
+    return () => clearTimeout(timeout);
+  }, [sleepTimerSeconds, handlePlayPause, player.status]);
+
+  const formatSleepTimer = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  };
+
+  const SLEEP_PRESETS = [5, 15, 30, 45, 60, 90];
 
   return (
     <Player ref={playersRef} currentEntryList={currentEntryList} muted={muted}>
@@ -737,6 +761,76 @@ const PlayerBar = () => {
                   />
                 </CustomTooltip>
 
+                {/* Sleep Timer Button */}
+                <Whisper
+                  trigger="click"
+                  placement="topEnd"
+                  preventOverflow
+                  speaker={
+                    <Popup title={t('Sleep Timer')}>
+                      <div style={{ marginBottom: 8 }}>
+                        <span style={{ marginRight: 8 }}>{t('Stop after current song')}</span>
+                        <input
+                          type="checkbox"
+                          checked={playQueue.stopAfterCurrent}
+                          onChange={(e) => dispatch(setStopAfterCurrent(e.target.checked))}
+                        />
+                      </div>
+                      <div>
+                        <StyledButton
+                          size="xs"
+                          appearance={sleepTimerSeconds === null ? 'default' : 'primary'}
+                          onClick={() => setSleepTimerSeconds(null)}
+                          style={{ marginRight: 4, marginBottom: 4 }}
+                        >
+                          {t('Off')}
+                        </StyledButton>
+                        {SLEEP_PRESETS.map((mins) => (
+                          <StyledButton
+                            key={mins}
+                            size="xs"
+                            appearance={sleepTimerSeconds === mins * 60 ? 'primary' : 'default'}
+                            onClick={() => setSleepTimerSeconds(mins * 60)}
+                            style={{ marginRight: 4, marginBottom: 4 }}
+                          >
+                            {`${mins}m`}
+                          </StyledButton>
+                        ))}
+                      </div>
+                    </Popup>
+                  }
+                >
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    style={{ display: 'inline-block', position: 'relative' }}
+                  >
+                    <PlayerControlIcon
+                      aria-label="sleep timer"
+                      icon="clock-o"
+                      size="lg"
+                      fixedWidth
+                      active={
+                        sleepTimerSeconds !== null || playQueue.stopAfterCurrent ? 'true' : 'false'
+                      }
+                    />
+                    {sleepTimerSeconds !== null && (
+                      <span
+                        style={{
+                          fontSize: '9px',
+                          position: 'absolute',
+                          bottom: 0,
+                          right: 0,
+                          lineHeight: 1,
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        {formatSleepTimer(sleepTimerSeconds)}
+                      </span>
+                    )}
+                  </span>
+                </Whisper>
+
                 {/* Display Queue Button */}
                 <CustomTooltip text={t('Mini')}>
                   <PlayerControlIcon
@@ -821,7 +915,9 @@ const PlayerBar = () => {
         duration={playQueue[currentEntryList][playQueue.currentIndex]?.duration || 0}
         playerStatus={player.status}
         title={playQueue[currentEntryList][playQueue.currentIndex]?.title}
-        artist={playQueue[currentEntryList][playQueue.currentIndex]?.artist}
+        artist={playQueue[currentEntryList][playQueue.currentIndex]?.artist
+          ?.map((a: any) => a.title)
+          .join(', ')}
         handlePlayPause={handlePlayPause}
         handlePrevTrack={handlePrevTrack}
         handleNextTrack={handleNextTrack}
