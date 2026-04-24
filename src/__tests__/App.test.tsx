@@ -61,6 +61,7 @@ const playQueueState: PlayQueue = {
   pollingInterval: 5,
   volumeFade: false,
   preservePlayNextOrder: true,
+  directPreviousTrack: false,
   currentIndex: 0,
   currentSongId: '',
   currentSongUniqueId: '',

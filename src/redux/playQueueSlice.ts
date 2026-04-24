@@ -37,6 +37,7 @@ export interface PlayQueue {
   pollingInterval: number;
   volumeFade: boolean;
   preservePlayNextOrder: boolean;
+  directPreviousTrack: boolean;
   currentIndex: number;
   currentSongId: string;
   currentSongUniqueId: string;
@@ -95,6 +96,7 @@ const initialState: PlayQueue = {
   pollingInterval: Number(parsedSettings.pollingInterval),
   volumeFade: Boolean(parsedSettings.volumeFade),
   preservePlayNextOrder: Boolean(parsedSettings.preservePlayNextOrder),
+  directPreviousTrack: Boolean(parsedSettings.directPreviousTrack),
   currentIndex: 0,
   currentSongId: '',
   currentSongUniqueId: '',
@@ -273,6 +275,9 @@ const playQueueSlice = createSlice({
           break;
         case 'preservePlayNextOrder':
           state.preservePlayNextOrder = action.payload.value;
+          break;
+        case 'directPreviousTrack':
+          state.directPreviousTrack = action.payload.value;
           break;
         case 'showDebugWindow':
           state.showDebugWindow = action.payload.value;

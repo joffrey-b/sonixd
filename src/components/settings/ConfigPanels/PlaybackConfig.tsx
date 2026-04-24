@@ -23,6 +23,9 @@ const PlaybackConfig = ({ bordered }: any) => {
   const [preservePlayNextOrder, setPreservePlayNextOrder] = useState(
     Boolean(settings.get('preservePlayNextOrder'))
   );
+  const [directPreviousTrack, setDirectPreviousTrack] = useState(
+    Boolean(settings.get('directPreviousTrack'))
+  );
   const crossfadePickerContainerRef = useRef(null);
 
   const handleSetCrossfadeDuration = (e: number) => {
@@ -156,6 +159,25 @@ const PlaybackConfig = ({ bordered }: any) => {
               checked={volumeFade}
               disabled={crossfadeDuration === 0}
               onChange={(e: boolean) => handleSetVolumeFade(e)}
+            />
+          }
+        />
+
+        <ConfigOption
+          name={t('Direct Previous Track')}
+          description={t(
+            'When enabled, the previous button always goes to the previous song. When disabled, it restarts the current song if you are more than 5 seconds in.'
+          )}
+          option={
+            <StyledToggle
+              size="md"
+              defaultChecked={directPreviousTrack}
+              checked={directPreviousTrack}
+              onChange={(e: boolean) => {
+                setDirectPreviousTrack(e);
+                settings.set('directPreviousTrack', e);
+                dispatch(setPlaybackSetting({ setting: 'directPreviousTrack', value: e }));
+              }}
             />
           }
         />

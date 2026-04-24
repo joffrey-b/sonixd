@@ -56,13 +56,15 @@ const usePlayerControls = (
           ? playersRef.current.player1.audioEl.current.currentTime
           : playersRef.current.player2.audioEl.current.currentTime;
 
-      if (
-        currentSeek < 5 &&
-        !(
-          (playQueue.repeat === 'none' || playQueue.repeat === 'one') &&
-          playQueue.currentIndex === 0
-        )
-      ) {
+      const goToPrev =
+        playQueue.directPreviousTrack ||
+        (currentSeek < 5 &&
+          !(
+            (playQueue.repeat === 'none' || playQueue.repeat === 'one') &&
+            playQueue.currentIndex === 0
+          ));
+
+      if (goToPrev) {
         dispatch(decrementCurrentIndex('usingHotkey'));
         dispatch(fixPlayer2Index());
       } else if (currentPlayer === 1) {

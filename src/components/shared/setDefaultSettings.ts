@@ -87,6 +87,7 @@ interface Settings {
   seekBackwardInterval: number;
   volumeFade: boolean;
   preservePlayNextOrder: boolean;
+  directPreviousTrack: boolean;
   repeat: string;
   shuffle: string;
   scrollWithCurrentSong: boolean;
@@ -220,6 +221,7 @@ const DEFAULT_SETTINGS: Settings = {
   seekBackwardInterval: 5,
   volumeFade: false,
   preservePlayNextOrder: true,
+  directPreviousTrack: false,
   repeat: 'none',
   shuffle: 'false',
   scrollWithCurrentSong: true,
