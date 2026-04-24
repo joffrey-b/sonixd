@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { FlexboxGrid } from 'rsuite';
 import { useTranslation } from 'react-i18next';
@@ -191,6 +191,7 @@ const PEQConfig = ({ bordered }: any) => {
   const peq = useAppSelector((state: any) => state.peq as PeqState);
   const theme = useTheme() as any;
   const typePickerRefs = useRef<(HTMLDivElement | null)[]>(Array(6).fill(null));
+  const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
     settings.set('peqEnabled', peq.enabled);
@@ -341,7 +342,8 @@ const PEQConfig = ({ bordered }: any) => {
                 <StyledInputNumber
                   size="xs"
                   disabled={!peq.enabled || !band.enabled}
-                  value={band.freq}
+                  key={`${resetKey}-${i}-freq`}
+                  defaultValue={band.freq}
                   min={20}
                   max={20000}
                   step={1}
@@ -357,7 +359,8 @@ const PEQConfig = ({ bordered }: any) => {
                 <StyledInputNumber
                   size="xs"
                   disabled={!peq.enabled || !band.enabled || NO_GAIN_TYPES.has(band.type)}
-                  value={NO_GAIN_TYPES.has(band.type) ? 0 : band.gain}
+                  key={`${resetKey}-${i}-gain`}
+                  defaultValue={NO_GAIN_TYPES.has(band.type) ? 0 : band.gain}
                   min={-12}
                   max={12}
                   step={0.5}
@@ -373,7 +376,8 @@ const PEQConfig = ({ bordered }: any) => {
                 <StyledInputNumber
                   size="xs"
                   disabled={!peq.enabled || !band.enabled}
-                  value={band.q}
+                  key={`${resetKey}-${i}-q`}
+                  defaultValue={band.q}
                   min={0.1}
                   max={16}
                   step={0.1}
@@ -389,7 +393,13 @@ const PEQConfig = ({ bordered }: any) => {
           ))}
         </BandTable>
         <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
-          <StyledButton size="sm" onClick={() => dispatch(resetPeqBands())}>
+          <StyledButton
+            size="sm"
+            onClick={() => {
+              dispatch(resetPeqBands());
+              setResetKey((k) => k + 1);
+            }}
+          >
             {t('Reset All')}
           </StyledButton>
         </div>
