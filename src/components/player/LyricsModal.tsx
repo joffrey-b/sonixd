@@ -100,6 +100,10 @@ const LyricsModal = ({
   // Keep the last valid lyrics while a new song's lyrics are loading so the
   // modal never unmounts mid-transition (prevents the visible flash).
   const lastLyricsRef = useRef<LyricsData | null>(null);
+  // When lyrics change, the active-line scroll fires with a stale currentTime
+  // (still at the end of the previous song) and overrides the scroll-to-top.
+  // This flag tells the scroll effect to skip one cycle after a song change.
+  const skipNextScrollRef = useRef(false);
   if (lyrics?.lines?.length) {
     lastLyricsRef.current = lyrics;
   }
@@ -126,15 +130,21 @@ const LyricsModal = ({
     return idx;
   }, [displayLyrics, currentTimeMs]);
 
-  // Reset scroll to top when the song changes (new lyrics object).
+  // Reset scroll to top when the song changes, and flag the next active-line
+  // scroll to be skipped so the stale-currentTime smooth scroll can't undo it.
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = 0;
+      skipNextScrollRef.current = true;
     }
   }, [lyrics]);
 
   // Scroll active line into view.
   useEffect(() => {
+    if (skipNextScrollRef.current) {
+      skipNextScrollRef.current = false;
+      return;
+    }
     if (show && activeIndex >= 0 && lineRefs.current[activeIndex]) {
       lineRefs.current[activeIndex]!.scrollIntoView({
         behavior: 'smooth',
