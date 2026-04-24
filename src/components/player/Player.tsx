@@ -20,6 +20,7 @@ import {
   setCurrentIndex,
   setFadeData,
   setPlayerSrc,
+  setStopAfterCurrent,
   getNextPlayerIndex,
 } from '../../redux/playQueueSlice';
 import cacheSong from '../shared/cacheSong';
@@ -618,7 +619,11 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       );
     }
 
-    if (playQueue.repeat === 'none' && playQueue.currentIndex === playQueue.entry.length - 1) {
+    if (
+      (playQueue.repeat === 'none' && playQueue.currentIndex === playQueue.entry.length - 1) ||
+      playQueue.stopAfterCurrent
+    ) {
+      if (playQueue.stopAfterCurrent) dispatch(setStopAfterCurrent(false));
       dispatch(fixPlayer2Index());
       player1Ref.current.audioEl.current.pause();
       player1Ref.current.audioEl.current.currentTime = 0;
@@ -670,7 +675,11 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
         playQueue[currentEntryList][playQueue.player2.index].streamUrl.replace(/stream/, 'download')
       );
     }
-    if (playQueue.repeat === 'none' && playQueue.currentIndex === playQueue.entry.length - 1) {
+    if (
+      (playQueue.repeat === 'none' && playQueue.currentIndex === playQueue.entry.length - 1) ||
+      playQueue.stopAfterCurrent
+    ) {
+      if (playQueue.stopAfterCurrent) dispatch(setStopAfterCurrent(false));
       dispatch(fixPlayer2Index());
       player1Ref.current.audioEl.current.pause();
       player1Ref.current.audioEl.current.currentTime = 0;

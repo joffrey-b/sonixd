@@ -178,6 +178,40 @@ const PlayerConfig = ({ bordered }: any) => {
         }
       />
       <ConfigOption
+        name={t('Direct Previous Track')}
+        description={t(
+          'When enabled, the previous button always goes to the previous song. When disabled, it restarts the current song if you are more than 5 seconds in.'
+        )}
+        option={
+          <StyledToggle
+            size="md"
+            defaultChecked={Boolean(settings.get('directPreviousTrack'))}
+            checked={Boolean(settings.get('directPreviousTrack'))}
+            onChange={(e: boolean) => {
+              settings.set('directPreviousTrack', e);
+              dispatch(setPlaybackSetting({ setting: 'directPreviousTrack', value: e }));
+            }}
+          />
+        }
+      />
+      <ConfigOption
+        name={t('Preserve Play Next Order')}
+        description={t(
+          'When enabled, songs added via "Play Next" are queued in the order they were added. When disabled, each "Play Next" inserts at the top of the queue.'
+        )}
+        option={
+          <StyledToggle
+            size="md"
+            defaultChecked={Boolean(settings.get('preservePlayNextOrder'))}
+            checked={Boolean(settings.get('preservePlayNextOrder'))}
+            onChange={(e: boolean) => {
+              settings.set('preservePlayNextOrder', e);
+              dispatch(setPlaybackSetting({ setting: 'preservePlayNextOrder', value: e }));
+            }}
+          />
+        }
+      />
+      <ConfigOption
         name={t('Resume Playback')}
         description={t('Resumes the player queue on startup.')}
         option={

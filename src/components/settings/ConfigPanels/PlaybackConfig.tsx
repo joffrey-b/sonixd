@@ -20,12 +20,6 @@ const PlaybackConfig = ({ bordered }: any) => {
   const [crossfadeDuration, setCrossfadeDuration] = useState(Number(settings.get('fadeDuration')));
   const [pollingInterval, setPollingInterval] = useState(Number(settings.get('pollingInterval')));
   const [volumeFade, setVolumeFade] = useState(Boolean(settings.get('volumeFade')));
-  const [preservePlayNextOrder, setPreservePlayNextOrder] = useState(
-    Boolean(settings.get('preservePlayNextOrder'))
-  );
-  const [directPreviousTrack, setDirectPreviousTrack] = useState(
-    Boolean(settings.get('directPreviousTrack'))
-  );
   const crossfadePickerContainerRef = useRef(null);
 
   const handleSetCrossfadeDuration = (e: number) => {
@@ -159,44 +153,6 @@ const PlaybackConfig = ({ bordered }: any) => {
               checked={volumeFade}
               disabled={crossfadeDuration === 0}
               onChange={(e: boolean) => handleSetVolumeFade(e)}
-            />
-          }
-        />
-
-        <ConfigOption
-          name={t('Direct Previous Track')}
-          description={t(
-            'When enabled, the previous button always goes to the previous song. When disabled, it restarts the current song if you are more than 5 seconds in.'
-          )}
-          option={
-            <StyledToggle
-              size="md"
-              defaultChecked={directPreviousTrack}
-              checked={directPreviousTrack}
-              onChange={(e: boolean) => {
-                setDirectPreviousTrack(e);
-                settings.set('directPreviousTrack', e);
-                dispatch(setPlaybackSetting({ setting: 'directPreviousTrack', value: e }));
-              }}
-            />
-          }
-        />
-
-        <ConfigOption
-          name={t('Preserve Play Next Order')}
-          description={t(
-            'When enabled, songs added via "Play Next" are queued in the order they were added. When disabled, each "Play Next" inserts at the top of the queue.'
-          )}
-          option={
-            <StyledToggle
-              size="md"
-              defaultChecked={preservePlayNextOrder}
-              checked={preservePlayNextOrder}
-              onChange={(e: boolean) => {
-                setPreservePlayNextOrder(e);
-                settings.set('preservePlayNextOrder', e);
-                dispatch(setPlaybackSetting({ setting: 'preservePlayNextOrder', value: e }));
-              }}
             />
           }
         />

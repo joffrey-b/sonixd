@@ -38,6 +38,7 @@ export interface PlayQueue {
   volumeFade: boolean;
   preservePlayNextOrder: boolean;
   directPreviousTrack: boolean;
+  stopAfterCurrent: boolean;
   currentIndex: number;
   currentSongId: string;
   currentSongUniqueId: string;
@@ -97,6 +98,7 @@ const initialState: PlayQueue = {
   volumeFade: Boolean(parsedSettings.volumeFade),
   preservePlayNextOrder: Boolean(parsedSettings.preservePlayNextOrder),
   directPreviousTrack: Boolean(parsedSettings.directPreviousTrack),
+  stopAfterCurrent: false,
   currentIndex: 0,
   currentSongId: '',
   currentSongUniqueId: '',
@@ -774,7 +776,7 @@ const playQueueSlice = createSlice({
 
     appendPlayQueue: (
       state,
-      action: PayloadAction<{ entries: Song[]; type: 'next' | 'later'; preserveOrder?: boolean }>
+      action: PayloadAction<{ entries: Song[]; type: 'next' | 'later' }>
     ) => {
       const isEmptyQueue = state.entry.length < 1;
       // We'll need to update the uniqueId otherwise selecting a song with duplicates
@@ -792,7 +794,7 @@ const playQueueSlice = createSlice({
       } else {
         const currentSongIndex = getCurrentEntryIndexByUID(state.entry, state.currentSongUniqueId);
         let insertIndex = currentSongIndex + 1;
-        if (action.payload.preserveOrder) {
+        if (state.preservePlayNextOrder) {
           // Advance past any entries already in the "play next" block
           while (
             insertIndex < state.entry.length &&
@@ -822,7 +824,7 @@ const playQueueSlice = createSlice({
           shuffledEntries.map((entry: any) => state.shuffledEntry.push(entry));
         } else {
           let shuffleInsertIndex = state.currentIndex + 1;
-          if (action.payload.preserveOrder) {
+          if (state.preservePlayNextOrder) {
             while (
               shuffleInsertIndex < state.shuffledEntry.length &&
               (state.shuffledEntry[shuffleInsertIndex] as any).playNextBlock
@@ -1019,6 +1021,10 @@ const playQueueSlice = createSlice({
       state.currentIndex = newCurrentSongIndex;
     },
 
+    setStopAfterCurrent: (state, action: PayloadAction<boolean>) => {
+      state.stopAfterCurrent = action.payload;
+    },
+
     restoreState: (state, action: PayloadAction<PlayQueueSaveState>) => {
       const result = action.payload;
 
@@ -1073,6 +1079,7 @@ export const {
   shuffleInPlace,
   setFadeData,
   setPlaybackSetting,
+  setStopAfterCurrent,
   restoreState,
 } = playQueueSlice.actions;
 export default playQueueSlice.reducer;

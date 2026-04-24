@@ -16,7 +16,6 @@ import { apiController } from '../api/controller';
 const usePlayQueueHandler = () => {
   const dispatch = useAppDispatch();
   const config = useAppSelector((state) => state.config);
-  const playQueue = useAppSelector((state) => state.playQueue);
   const queryClient = useQueryClient();
 
   const dispatchSongsToQueue = useCallback(
@@ -36,13 +35,7 @@ const usePlayQueueHandler = () => {
 
       if (play === Play.Next || play === Play.Later) {
         if (filteredSongs.entries.length > 0) {
-          dispatch(
-            appendPlayQueue({
-              entries: filteredSongs.entries,
-              type: play,
-              preserveOrder: play === Play.Next ? playQueue.preservePlayNextOrder : false,
-            })
-          );
+          dispatch(appendPlayQueue({ entries: filteredSongs.entries, type: play }));
           dispatch(fixPlayer2Index());
         }
       }
@@ -55,7 +48,7 @@ const usePlayQueueHandler = () => {
         })
       );
     },
-    [config.playback.filters, dispatch, playQueue.preservePlayNextOrder]
+    [config.playback.filters, dispatch]
   );
 
   const handlePlayQueueAdd = async (options: {
