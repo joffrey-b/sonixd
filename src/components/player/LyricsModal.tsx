@@ -70,6 +70,17 @@ const ButtonRow = styled.div`
   gap: 16px;
 `;
 
+const SongHeader = styled.div`
+  text-align: center;
+  padding: 12px 16px 0;
+  flex-shrink: 0;
+  font-size: 0.9em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+`;
+
 interface Props {
   show: boolean;
   handleHide: () => void;
@@ -77,6 +88,8 @@ interface Props {
   currentTime: number;
   duration: number;
   playerStatus: string;
+  title?: string;
+  artist?: string;
   handlePlayPause: () => void;
   handlePrevTrack: () => void;
   handleNextTrack: () => void;
@@ -90,6 +103,8 @@ const LyricsModal = ({
   currentTime,
   duration,
   playerStatus,
+  title,
+  artist,
   handlePlayPause,
   handlePrevTrack,
   handleNextTrack,
@@ -164,6 +179,9 @@ const LyricsModal = ({
   return (
     <InfoModal width="560px" show={show} handleHide={handleHide}>
       <ModalInner>
+        {(title || artist) && (
+          <SongHeader>{artist && title ? `${artist} — ${title}` : artist || title}</SongHeader>
+        )}
         <LyricsContainer ref={containerRef}>
           {displayLyrics.lines.map((line, i) => (
             <Line

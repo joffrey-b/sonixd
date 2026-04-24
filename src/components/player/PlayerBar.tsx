@@ -820,6 +820,8 @@ const PlayerBar = () => {
         currentTime={currentTime}
         duration={playQueue[currentEntryList][playQueue.currentIndex]?.duration || 0}
         playerStatus={player.status}
+        title={playQueue[currentEntryList][playQueue.currentIndex]?.title}
+        artist={playQueue[currentEntryList][playQueue.currentIndex]?.artist}
         handlePlayPause={handlePlayPause}
         handlePrevTrack={handlePrevTrack}
         handleNextTrack={handleNextTrack}
