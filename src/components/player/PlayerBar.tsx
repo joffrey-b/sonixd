@@ -818,6 +818,12 @@ const PlayerBar = () => {
         handleHide={() => setShowLyricsModal(false)}
         lyrics={lyrics}
         currentTime={currentTime}
+        duration={playQueue[currentEntryList][playQueue.currentIndex]?.duration || 0}
+        playerStatus={player.status}
+        handlePlayPause={handlePlayPause}
+        handlePrevTrack={handlePrevTrack}
+        handleNextTrack={handleNextTrack}
+        handleSeekSlider={handleSeekSlider}
       />
     </Player>
   );
