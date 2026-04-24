@@ -193,6 +193,7 @@ const PEQConfig = ({ bordered }: any) => {
   const typePickerRefs = useRef<(HTMLDivElement | null)[]>(Array(6).fill(null));
   const [resetKey, setResetKey] = useState(0);
   const [fieldKeys, setFieldKeys] = useState<Record<string, number>>({});
+  const [pendingReset, setPendingReset] = useState(false);
   const bumpKey = (k: string) => setFieldKeys((prev) => ({ ...prev, [k]: (prev[k] || 0) + 1 }));
 
   useEffect(() => {
@@ -200,6 +201,16 @@ const PEQConfig = ({ bordered }: any) => {
   }, [peq.enabled]);
   useEffect(() => {
     settings.set('peqBands', peq.bands);
+  }, [peq.bands]);
+
+  // Wait for peq.bands to actually update in the store (electron-redux IPC round-trip)
+  // before bumping the input keys, so defaultValue picks up the fresh reset values.
+  useEffect(() => {
+    if (!pendingReset) return;
+    setResetKey((k) => k + 1);
+    setFieldKeys({});
+    setPendingReset(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peq.bands]);
 
   const primaryColor = theme?.colors?.primary || '#2196f3';
@@ -406,8 +417,7 @@ const PEQConfig = ({ bordered }: any) => {
             size="sm"
             onClick={() => {
               dispatch(resetPeqBands());
-              setResetKey((k) => k + 1);
-              setFieldKeys({});
+              setPendingReset(true);
             }}
           >
             {t('Reset All')}
