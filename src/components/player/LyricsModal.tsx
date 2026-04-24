@@ -96,19 +96,44 @@ const LyricsModal = ({
   handleSeekSlider,
 }: Props) => {
   const lineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Keep the last valid lyrics while a new song's lyrics are loading so the
+  // modal never unmounts mid-transition (prevents the visible flash).
+  const lastLyricsRef = useRef<LyricsData | null>(null);
+  if (lyrics?.lines?.length) {
+    lastLyricsRef.current = lyrics;
+  }
+
+  // Clear stale lyrics when the modal is closed so reopening starts fresh.
+  useEffect(() => {
+    if (!show) {
+      lastLyricsRef.current = null;
+    }
+  }, [show]);
+
+  const displayLyrics = lyrics?.lines?.length ? lyrics : lastLyricsRef.current;
+
   const currentTimeMs = currentTime * 1000;
 
   const activeIndex = useMemo(() => {
-    if (!lyrics?.synced || !lyrics.lines.length) return -1;
+    if (!displayLyrics?.synced || !displayLyrics.lines.length) return -1;
     let idx = -1;
-    for (let i = 0; i < lyrics.lines.length; i += 1) {
-      if (lyrics.lines[i].time !== null && lyrics.lines[i].time! <= currentTimeMs) {
+    for (let i = 0; i < displayLyrics.lines.length; i += 1) {
+      if (displayLyrics.lines[i].time !== null && displayLyrics.lines[i].time! <= currentTimeMs) {
         idx = i;
       }
     }
     return idx;
-  }, [lyrics, currentTimeMs]);
+  }, [displayLyrics, currentTimeMs]);
 
+  // Reset scroll to top when the song changes (new lyrics object).
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+  }, [lyrics]);
+
+  // Scroll active line into view.
   useEffect(() => {
     if (show && activeIndex >= 0 && lineRefs.current[activeIndex]) {
       lineRefs.current[activeIndex]!.scrollIntoView({
@@ -118,13 +143,13 @@ const LyricsModal = ({
     }
   }, [show, activeIndex]);
 
-  if (!lyrics?.lines?.length) return null;
+  if (!displayLyrics?.lines?.length) return null;
 
   return (
     <InfoModal width="560px" show={show} handleHide={handleHide}>
       <ModalInner>
-        <LyricsContainer>
-          {lyrics.lines.map((line, i) => (
+        <LyricsContainer ref={containerRef}>
+          {displayLyrics.lines.map((line, i) => (
             <Line
               // eslint-disable-next-line react/no-array-index-key
               key={i}
@@ -132,10 +157,10 @@ const LyricsModal = ({
                 lineRefs.current[i] = el;
               }}
               $active={i === activeIndex}
-              $past={lyrics.synced && activeIndex >= 0 && i < activeIndex}
-              $clickable={lyrics.synced && line.time !== null}
+              $past={displayLyrics.synced && activeIndex >= 0 && i < activeIndex}
+              $clickable={displayLyrics.synced && line.time !== null}
               onClick={() => {
-                if (lyrics.synced && line.time !== null) {
+                if (displayLyrics.synced && line.time !== null) {
                   handleSeekSlider(line.time / 1000);
                 }
               }}
