@@ -1,41 +1,24 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useHistory } from 'react-router-dom';
-import { ButtonToolbar, Content, FlexboxGrid, Icon, Nav, Whisper } from 'rsuite';
-import { useTranslation } from 'react-i18next';
+import { ButtonToolbar, Content, FlexboxGrid, Icon } from 'rsuite';
 import Sidebar from './Sidebar';
 import Titlebar from './Titlebar';
 import { RootContainer, RootFooter, MainContainer } from './styled';
 import { setContextMenu } from '../../redux/miscSlice';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { clearSelected } from '../../redux/multiSelectSlice';
-import { StyledButton, StyledNavItem } from '../shared/styled';
-import {
-  GridViewConfigPanel,
-  ListViewConfigPanel,
-  PaginationConfigPanel,
-  ThemeConfigPanel,
-} from '../settings/ConfigPanels/LookAndFeelConfig';
-import PlaybackConfig from '../settings/ConfigPanels/PlaybackConfig';
-import PlayerConfig from '../settings/ConfigPanels/PlayerConfig';
-import ServerConfig from '../settings/ConfigPanels/ServerConfig';
-import CacheConfig from '../settings/ConfigPanels/CacheConfig';
-import WindowConfig from '../settings/ConfigPanels/WindowConfig';
-import AdvancedConfig from '../settings/ConfigPanels/AdvancedConfig';
+import { StyledButton } from '../shared/styled';
 import { setSidebar } from '../../redux/configSlice';
 import SearchBar from '../search/SearchBar';
-import Popup from '../shared/Popup';
 import { settings } from '../shared/setDefaultSettings';
 
 const Layout = ({ footer, children, disableSidebar, font }: any) => {
-  const { t } = useTranslation();
   const history = useHistory();
   const dispatch = useAppDispatch();
   const misc = useAppSelector((state) => state.misc);
   const config = useAppSelector((state) => state.config);
   const multiSelect = useAppSelector((state) => state.multiSelect);
-
-  const [activeConfigNav, setActiveConfigNav] = useState('listView');
 
   useHotkeys(
     'backspace',
@@ -168,54 +151,6 @@ const Layout = ({ footer, children, disableSidebar, font }: any) => {
                 <FlexboxGrid.Item>
                   <ButtonToolbar>
                     <SearchBar />
-                    <Whisper
-                      speaker={
-                        <Popup
-                          style={{
-                            width: '620px',
-                            maxHeight: '80vh',
-                            overflowY: 'auto',
-                            overflowX: 'hidden',
-                            padding: '0px',
-                          }}
-                        >
-                          <Nav
-                            activeKey={activeConfigNav}
-                            onSelect={(e) => setActiveConfigNav(e)}
-                            appearance="tabs"
-                          >
-                            <StyledNavItem eventKey="listView">{t('List View')}</StyledNavItem>
-                            <StyledNavItem eventKey="gridView">{t('Grid View')}</StyledNavItem>
-                            <StyledNavItem eventKey="playback">{t('Playback')}</StyledNavItem>
-                            <StyledNavItem eventKey="player">{t('Player')}</StyledNavItem>
-                            <StyledNavItem eventKey="theme">{t('Theme')}</StyledNavItem>
-                            <StyledNavItem eventKey="server">{t('Server')}</StyledNavItem>
-                            <StyledNavItem eventKey="other">{t('Other')}</StyledNavItem>
-                          </Nav>
-                          {activeConfigNav === 'listView' && <ListViewConfigPanel />}
-                          {activeConfigNav === 'gridView' && <GridViewConfigPanel />}
-                          {activeConfigNav === 'playback' && <PlaybackConfig />}
-                          {activeConfigNav === 'player' && <PlayerConfig />}
-                          {activeConfigNav === 'theme' && <ThemeConfigPanel />}
-                          {activeConfigNav === 'server' && <ServerConfig />}
-                          {activeConfigNav === 'other' && (
-                            <>
-                              <PaginationConfigPanel />
-                              <CacheConfig />
-                              <WindowConfig />
-                              <AdvancedConfig />
-                            </>
-                          )}
-                        </Popup>
-                      }
-                      trigger="click"
-                      placement="bottomEnd"
-                      preventOverflow
-                    >
-                      <StyledButton aria-label="settings" appearance="subtle">
-                        <Icon icon="cog" />
-                      </StyledButton>
-                    </Whisper>
                   </ButtonToolbar>
                 </FlexboxGrid.Item>
               </>
