@@ -346,7 +346,11 @@ const PEQConfig = ({ bordered }: any) => {
                   max={20000}
                   step={1}
                   width={80}
-                  onChange={(val: number) => updateBandField(i, 'freq', Number(val))}
+                  onChange={(val: number) => {
+                    const n = Number(val);
+                    if (!Number.isFinite(n)) return;
+                    updateBandField(i, 'freq', Math.max(20, Math.min(20000, n)));
+                  }}
                 />
               </BandCell>
               <BandCell>
@@ -354,11 +358,15 @@ const PEQConfig = ({ bordered }: any) => {
                   size="xs"
                   disabled={!peq.enabled || !band.enabled || NO_GAIN_TYPES.has(band.type)}
                   value={NO_GAIN_TYPES.has(band.type) ? 0 : band.gain}
-                  min={-24}
-                  max={24}
+                  min={-12}
+                  max={12}
                   step={0.5}
                   width={70}
-                  onChange={(val: number) => updateBandField(i, 'gain', Number(val))}
+                  onChange={(val: number) => {
+                    const n = Number(val);
+                    if (!Number.isFinite(n)) return;
+                    updateBandField(i, 'gain', Math.max(-12, Math.min(12, n)));
+                  }}
                 />
               </BandCell>
               <BandCell>
@@ -370,7 +378,11 @@ const PEQConfig = ({ bordered }: any) => {
                   max={16}
                   step={0.1}
                   width={65}
-                  onChange={(val: number) => updateBandField(i, 'q', Number(val))}
+                  onChange={(val: number) => {
+                    const n = Number(val);
+                    if (!Number.isFinite(n) || n <= 0) return;
+                    updateBandField(i, 'q', Math.max(0.1, Math.min(16, n)));
+                  }}
                 />
               </BandCell>
             </BandRow>
