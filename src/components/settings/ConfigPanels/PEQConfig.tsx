@@ -192,6 +192,8 @@ const PEQConfig = ({ bordered }: any) => {
   const theme = useTheme() as any;
   const typePickerRefs = useRef<(HTMLDivElement | null)[]>(Array(6).fill(null));
   const [resetKey, setResetKey] = useState(0);
+  const [fieldKeys, setFieldKeys] = useState<Record<string, number>>({});
+  const bumpKey = (k: string) => setFieldKeys((prev) => ({ ...prev, [k]: (prev[k] || 0) + 1 }));
 
   useEffect(() => {
     settings.set('peqEnabled', peq.enabled);
@@ -342,8 +344,9 @@ const PEQConfig = ({ bordered }: any) => {
                 <StyledInputNumber
                   size="xs"
                   disabled={!peq.enabled || !band.enabled}
-                  key={`${resetKey}-${i}-freq`}
+                  key={`${resetKey}-${fieldKeys[`${i}-freq`] || 0}-${i}-freq`}
                   defaultValue={band.freq}
+                  onBlur={() => bumpKey(`${i}-freq`)}
                   min={20}
                   max={20000}
                   step={1}
@@ -359,8 +362,9 @@ const PEQConfig = ({ bordered }: any) => {
                 <StyledInputNumber
                   size="xs"
                   disabled={!peq.enabled || !band.enabled || NO_GAIN_TYPES.has(band.type)}
-                  key={`${resetKey}-${i}-gain`}
+                  key={`${resetKey}-${fieldKeys[`${i}-gain`] || 0}-${i}-gain`}
                   defaultValue={NO_GAIN_TYPES.has(band.type) ? 0 : band.gain}
+                  onBlur={() => bumpKey(`${i}-gain`)}
                   min={-12}
                   max={12}
                   step={0.5}
@@ -380,8 +384,9 @@ const PEQConfig = ({ bordered }: any) => {
                 <StyledInputNumber
                   size="xs"
                   disabled={!peq.enabled || !band.enabled}
-                  key={`${resetKey}-${i}-q`}
+                  key={`${resetKey}-${fieldKeys[`${i}-q`] || 0}-${i}-q`}
                   defaultValue={band.q}
+                  onBlur={() => bumpKey(`${i}-q`)}
                   min={0.1}
                   max={16}
                   step={0.1}
@@ -402,6 +407,7 @@ const PEQConfig = ({ bordered }: any) => {
             onClick={() => {
               dispatch(resetPeqBands());
               setResetKey((k) => k + 1);
+              setFieldKeys({});
             }}
           >
             {t('Reset All')}
