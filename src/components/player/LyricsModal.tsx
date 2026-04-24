@@ -145,13 +145,19 @@ const LyricsModal = ({
       skipNextScrollRef.current = false;
       return;
     }
-    if (show && activeIndex >= 0 && lineRefs.current[activeIndex]) {
+    if (!show) return;
+    // Song restarted (previous button) or seeked before the first line.
+    if (activeIndex < 0 && displayLyrics?.synced && containerRef.current) {
+      containerRef.current.scrollTop = 0;
+      return;
+    }
+    if (activeIndex >= 0 && lineRefs.current[activeIndex]) {
       lineRefs.current[activeIndex]!.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
       });
     }
-  }, [show, activeIndex]);
+  }, [show, activeIndex, displayLyrics?.synced]);
 
   if (!displayLyrics?.lines?.length) return null;
 
