@@ -351,7 +351,7 @@ const PEQConfig = ({ bordered }: any) => {
                   onChange={(val: number) => {
                     const n = Number(val);
                     if (!Number.isFinite(n)) return;
-                    updateBandField(i, 'freq', Math.max(20, Math.min(20000, n)));
+                    updateBandField(i, 'freq', Math.round(Math.max(20, Math.min(20000, n))));
                   }}
                 />
               </BandCell>
@@ -368,7 +368,11 @@ const PEQConfig = ({ bordered }: any) => {
                   onChange={(val: number) => {
                     const n = Number(val);
                     if (!Number.isFinite(n)) return;
-                    updateBandField(i, 'gain', Math.max(-12, Math.min(12, n)));
+                    updateBandField(
+                      i,
+                      'gain',
+                      Math.round(Math.max(-12, Math.min(12, n)) * 10) / 10
+                    );
                   }}
                 />
               </BandCell>
@@ -385,7 +389,7 @@ const PEQConfig = ({ bordered }: any) => {
                   onChange={(val: number) => {
                     const n = Number(val);
                     if (!Number.isFinite(n) || n <= 0) return;
-                    updateBandField(i, 'q', Math.max(0.1, Math.min(16, n)));
+                    updateBandField(i, 'q', Math.round(Math.max(0.1, Math.min(16, n)) * 10) / 10);
                   }}
                 />
               </BandCell>
