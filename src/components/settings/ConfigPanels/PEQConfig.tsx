@@ -415,6 +415,7 @@ const PEQConfig = ({ bordered }: any) => {
         <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
           <StyledButton
             size="sm"
+            disabled={!peq.enabled}
             onClick={() => {
               dispatch(resetPeqBands());
               setPendingReset(true);
