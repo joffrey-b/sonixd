@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useQueryClient } from 'react-query';
 import { FlexboxGrid, Grid, Row, Col, Whisper, Icon } from 'rsuite';
+import { WhisperInstance } from 'rsuite/lib/Whisper';
 import { useHistory } from 'react-router-dom';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import format from 'format-duration';
@@ -22,7 +23,12 @@ import CustomTooltip from '../shared/CustomTooltip';
 import placeholderImg from '../../img/placeholder.png';
 import DebugWindow from '../debug/DebugWindow';
 import { getCurrentEntryList, writeOBSFiles } from '../../shared/utils';
-import { SecondaryTextWrapper, StyledButton, StyledRate } from '../shared/styled';
+import {
+  SecondaryTextWrapper,
+  StyledButton,
+  StyledInputNumber,
+  StyledRate,
+} from '../shared/styled';
 import { Artist, Play, Server, Song } from '../../types';
 import { InfoModal } from '../modal/Modal';
 import useGetLyrics from '../../hooks/useGetLyrics';
@@ -54,6 +60,7 @@ const PlayerBar = () => {
   const [showCoverArtModal, setShowCoverArtModal] = useState(false);
   const [showLyricsModal, setShowLyricsModal] = useState(false);
   const [sleepTimerSeconds, setSleepTimerSeconds] = useState<number | null>(null);
+  const [sleepTimerCustom, setSleepTimerCustom] = useState('');
   const [isLoadingRandom, setIsLoadingRandom] = useState(false);
   const { handlePlayQueueAdd } = usePlayQueueHandler();
   const songDuration = useMemo(
@@ -78,6 +85,7 @@ const PlayerBar = () => {
   };
 
   const playersRef = useRef<any>();
+  const sleepTimerWhisperRef = useRef<WhisperInstance>(null);
   const history = useHistory();
   useDiscordRpc({ playersRef });
 
@@ -763,6 +771,7 @@ const PlayerBar = () => {
 
                 {/* Sleep Timer Button */}
                 <Whisper
+                  ref={sleepTimerWhisperRef}
                   trigger="click"
                   placement="topEnd"
                   preventOverflow
@@ -779,8 +788,11 @@ const PlayerBar = () => {
                       <div>
                         <StyledButton
                           size="xs"
-                          appearance={sleepTimerSeconds === null ? 'default' : 'primary'}
-                          onClick={() => setSleepTimerSeconds(null)}
+                          appearance={sleepTimerSeconds === null ? 'primary' : 'default'}
+                          onClick={() => {
+                            setSleepTimerSeconds(null);
+                            sleepTimerWhisperRef.current?.close();
+                          }}
                           style={{ marginRight: 4, marginBottom: 4 }}
                         >
                           {t('Off')}
@@ -790,12 +802,39 @@ const PlayerBar = () => {
                             key={mins}
                             size="xs"
                             appearance={sleepTimerSeconds === mins * 60 ? 'primary' : 'default'}
-                            onClick={() => setSleepTimerSeconds(mins * 60)}
+                            onClick={() => {
+                              setSleepTimerSeconds(mins * 60);
+                              sleepTimerWhisperRef.current?.close();
+                            }}
                             style={{ marginRight: 4, marginBottom: 4 }}
                           >
                             {`${mins}m`}
                           </StyledButton>
                         ))}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                        <StyledInputNumber
+                          size="xs"
+                          min={1}
+                          max={999}
+                          width={70}
+                          value={sleepTimerCustom}
+                          onChange={(e: any) => setSleepTimerCustom(e)}
+                          placeholder={t('min')}
+                        />
+                        <StyledButton
+                          size="xs"
+                          onClick={() => {
+                            const mins = parseInt(sleepTimerCustom, 10);
+                            if (mins > 0) {
+                              setSleepTimerSeconds(mins * 60);
+                              setSleepTimerCustom('');
+                              sleepTimerWhisperRef.current?.close();
+                            }
+                          }}
+                        >
+                          {t('Apply')}
+                        </StyledButton>
                       </div>
                     </Popup>
                   }
