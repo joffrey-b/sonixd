@@ -61,6 +61,7 @@ import {
 import { setStatus } from '../../redux/playerSlice';
 import { apiController } from '../../api/controller';
 import { Server } from '../../types';
+import SpectrogramModal from './SpectrogramModal';
 
 export const ContextMenuButton = ({ text, hotkey, ...rest }: any) => {
   return (
@@ -114,6 +115,7 @@ export const GlobalContextMenu = () => {
   const [shouldCreatePlaylist, setShouldCreatePlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [indexToMoveTo, setIndexToMoveTo] = useState(0);
+  const [showSpectrogram, setShowSpectrogram] = useState(false);
   const playlistPickerContainerRef = useRef(null);
 
   const { data: playlists }: any = useQuery(['playlists'], () =>
@@ -802,6 +804,15 @@ export const GlobalContextMenu = () => {
     }
   };
 
+  const handleShowSpectrogram = () => {
+    dispatch(setContextMenu({ show: false }));
+    if (multiSelect.selected.length !== 1) {
+      notifyToast('error', t('Select only one row'));
+      return;
+    }
+    setShowSpectrogram(true);
+  };
+
   const handleRating = async (rating: number) => {
     dispatch(setContextMenu({ show: false }));
     const ids = _.map(multiSelect.selected, 'id');
@@ -1079,8 +1090,22 @@ export const GlobalContextMenu = () => {
             onClick={handleViewInFolder}
             disabled={misc.contextMenu.disabledOptions.includes('viewInFolder')}
           />
+          <ContextMenuButton
+            text={t('Show spectrogram')}
+            onClick={handleShowSpectrogram}
+            disabled={
+              !misc.contextMenu.type.match('music|nowPlaying') || multiSelect.selected.length !== 1
+            }
+          />
         </ContextMenu>
       )}
+      <SpectrogramModal
+        show={showSpectrogram}
+        handleHide={() => setShowSpectrogram(false)}
+        streamUrl={multiSelect.selected[0]?.streamUrl}
+        title={multiSelect.selected[0]?.title}
+        artist={multiSelect.selected[0]?.artist?.map((a: any) => a.title).join(', ')}
+      />
     </>
   );
 };
