@@ -834,7 +834,7 @@ export const GlobalContextMenu = () => {
           yPos={misc.contextMenu.yPos}
           minWidth={200}
           maxWidth={350}
-          numOfButtons={12}
+          numOfButtons={13}
           numOfDividers={3}
         >
           <ContextMenuButton
