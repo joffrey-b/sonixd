@@ -442,6 +442,18 @@ const configState: ConfigPage = {
     minimizeToTray: false,
     exitToTray: false,
   },
+  hotkeys: {
+    navigateBack: 'backspace',
+    search: 'ctrl+f',
+    selectAll: 'ctrl+a',
+    removeSelected: 'del',
+    playPause: 'ctrl+p',
+    nextTrack: 'ctrl+right',
+    prevTrack: 'ctrl+left',
+    volumeUp: 'ctrl+up',
+    volumeDown: 'ctrl+down',
+    mute: 'ctrl+m',
+  },
 };
 
 const favoriteState: FavoritePage = {
