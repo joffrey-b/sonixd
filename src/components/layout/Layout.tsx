@@ -21,12 +21,12 @@ const Layout = ({ footer, children, disableSidebar, font }: any) => {
   const multiSelect = useAppSelector((state) => state.multiSelect);
 
   useHotkeys(
-    'backspace',
+    config.hotkeys.navigateBack,
     (e: KeyboardEvent) => {
       e.preventDefault();
       history.goBack();
     },
-    []
+    [config.hotkeys.navigateBack]
   );
 
   const handleToggle = () => {

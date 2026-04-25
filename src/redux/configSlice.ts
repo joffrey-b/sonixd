@@ -67,6 +67,18 @@ export interface ConfigPage {
     exitToTray: boolean;
   };
   serverType: Server;
+  hotkeys: {
+    navigateBack: string;
+    search: string;
+    selectAll: string;
+    removeSelected: string;
+    playPause: string;
+    nextTrack: string;
+    prevTrack: string;
+    volumeUp: string;
+    volumeDown: string;
+    mute: string;
+  };
 }
 
 interface SortColumn {
@@ -214,6 +226,18 @@ const initialState: ConfigPage = {
     exitToTray: parsedSettings.exitToTray,
   },
   serverType: parsedSettings.serverType,
+  hotkeys: {
+    navigateBack: parsedSettings.hotkeyNavigateBack || 'backspace',
+    search: parsedSettings.hotkeySearch || 'ctrl+f',
+    selectAll: parsedSettings.hotkeySelectAll || 'ctrl+a',
+    removeSelected: parsedSettings.hotkeyRemoveSelected || 'del',
+    playPause: parsedSettings.hotkeyPlayPause || 'ctrl+p',
+    nextTrack: parsedSettings.hotkeyNextTrack || 'ctrl+right',
+    prevTrack: parsedSettings.hotkeyPrevTrack || 'ctrl+left',
+    volumeUp: parsedSettings.hotkeyVolumeUp || 'ctrl+up',
+    volumeDown: parsedSettings.hotkeyVolumeDown || 'ctrl+down',
+    mute: parsedSettings.hotkeyMute || 'ctrl+m',
+  },
 };
 
 const configSlice = createSlice({
@@ -346,6 +370,13 @@ const configSlice = createSlice({
     setOBS: (state, action: PayloadAction<any>) => {
       state.external.obs = action.payload;
     },
+
+    setHotkey: (
+      state,
+      action: PayloadAction<{ action: keyof ConfigPage['hotkeys']; key: string }>
+    ) => {
+      state.hotkeys[action.payload.action] = action.payload.key;
+    },
   },
 });
 
@@ -370,5 +401,6 @@ export const {
   setSidebar,
   setWindow,
   setPlayer,
+  setHotkey,
 } = configSlice.actions;
 export default configSlice.reducer;

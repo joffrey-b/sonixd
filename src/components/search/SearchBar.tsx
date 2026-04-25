@@ -238,7 +238,7 @@ const SearchBar = () => {
     )
   );
 
-  useHotkeys('ctrl+f', () => {
+  useHotkeys(config.hotkeys.search, () => {
     if (history.location?.pathname?.match('/search')) {
       setTimeout(() => {
         const searchInputBar = document.getElementById('local-search-input') as HTMLInputElement;

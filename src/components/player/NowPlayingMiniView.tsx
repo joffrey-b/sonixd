@@ -98,7 +98,7 @@ const NowPlayingMiniView = () => {
   );
 
   useHotkeys(
-    'del',
+    config.hotkeys.removeSelected,
     () => {
       if (multiSelect.selected.length === playQueue.entry.length) {
         // Clear the queue instead of removing individually
@@ -113,7 +113,7 @@ const NowPlayingMiniView = () => {
         }
       }
     },
-    [multiSelect.selected]
+    [multiSelect.selected, config.hotkeys.removeSelected]
   );
 
   useEffect(() => {

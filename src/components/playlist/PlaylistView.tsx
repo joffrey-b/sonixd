@@ -100,14 +100,14 @@ const PlaylistView = ({ ...rest }) => {
   ]);
 
   useHotkeys(
-    'del',
+    config.hotkeys.removeSelected,
     () => {
       const selectedType = multiSelect.selected[0].type;
       if (selectedType === 'music') {
         dispatch(removeFromPlaylist({ selectedEntries: multiSelect.selected }));
       }
     },
-    [multiSelect.selected]
+    [multiSelect.selected, config.hotkeys.removeSelected]
   );
 
   useEffect(() => {

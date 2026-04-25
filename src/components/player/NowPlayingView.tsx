@@ -109,7 +109,7 @@ const NowPlayingView = () => {
   });
 
   useHotkeys(
-    'del',
+    config.hotkeys.removeSelected,
     (e: KeyboardEvent) => {
       e.preventDefault();
       if (multiSelect.selected.length === playQueue.entry.length) {
@@ -125,7 +125,7 @@ const NowPlayingView = () => {
         }
       }
     },
-    [multiSelect.selected]
+    [multiSelect.selected, config.hotkeys.removeSelected]
   );
 
   useEffect(() => {

@@ -89,6 +89,16 @@ interface Settings {
   preservePlayNextOrder: boolean;
   directPreviousTrack: boolean;
   scrobbleThreshold: number;
+  hotkeyNavigateBack: string;
+  hotkeySearch: string;
+  hotkeySelectAll: string;
+  hotkeyRemoveSelected: string;
+  hotkeyPlayPause: string;
+  hotkeyNextTrack: string;
+  hotkeyPrevTrack: string;
+  hotkeyVolumeUp: string;
+  hotkeyVolumeDown: string;
+  hotkeyMute: string;
   repeat: string;
   shuffle: string;
   scrollWithCurrentSong: boolean;
@@ -224,6 +234,16 @@ const DEFAULT_SETTINGS: Settings = {
   preservePlayNextOrder: true,
   directPreviousTrack: false,
   scrobbleThreshold: 90,
+  hotkeyNavigateBack: 'backspace',
+  hotkeySearch: 'ctrl+f',
+  hotkeySelectAll: 'ctrl+a',
+  hotkeyRemoveSelected: 'del',
+  hotkeyPlayPause: 'ctrl+p',
+  hotkeyNextTrack: 'ctrl+right',
+  hotkeyPrevTrack: 'ctrl+left',
+  hotkeyVolumeUp: 'ctrl+up',
+  hotkeyVolumeDown: 'ctrl+down',
+  hotkeyMute: 'ctrl+m',
   repeat: 'none',
   shuffle: 'false',
   scrollWithCurrentSong: true,

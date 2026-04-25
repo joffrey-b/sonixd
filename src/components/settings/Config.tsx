@@ -23,6 +23,7 @@ import { apiController } from '../../api/controller';
 import ExternalConfig from './ConfigPanels/ExternalConfig';
 import EQConfig from './ConfigPanels/EQConfig';
 import PEQConfig from './ConfigPanels/PEQConfig';
+import KeyboardShortcutsConfig from './ConfigPanels/KeyboardShortcutsConfig';
 import Popup from '../shared/Popup';
 
 const GITHUB_RELEASE_URL = 'https://api.github.com/repos/jeffvli/sonixd/releases?per_page=3';
@@ -118,6 +119,17 @@ const Config = () => {
                   }}
                 >
                   {t('Look & Feel')}
+                </StyledNavItem>
+                <StyledNavItem
+                  eventKey="shortcuts"
+                  onKeyDown={(e: any) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      dispatch(setActive({ ...config.active, tab: 'shortcuts' }));
+                    }
+                  }}
+                >
+                  {t('Keyboard Shortcuts')}
                 </StyledNavItem>
                 <StyledNavItem
                   eventKey="other"
@@ -237,6 +249,8 @@ const Config = () => {
       )}
 
       {config.active.tab === 'lookandfeel' && <LookAndFeelConfig bordered />}
+
+      {config.active.tab === 'shortcuts' && <KeyboardShortcutsConfig bordered />}
 
       {config.active.tab === 'other' && (
         <>

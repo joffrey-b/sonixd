@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 import axios from 'axios';
 import { useQueryClient } from 'react-query';
 import { FlexboxGrid, Grid, Row, Col, Whisper, Icon } from 'rsuite';
@@ -243,6 +244,60 @@ const PlayerBar = () => {
 
   const { handleFavorite } = useFavorite();
   const { handleRating } = useRating();
+
+  const hk = config.hotkeys;
+  useHotkeys(
+    hk.playPause,
+    (e) => {
+      e.preventDefault();
+      handlePlayPause();
+    },
+    [hk.playPause, handlePlayPause]
+  );
+  useHotkeys(
+    hk.nextTrack,
+    (e) => {
+      e.preventDefault();
+      handleNextTrack();
+    },
+    [hk.nextTrack, handleNextTrack]
+  );
+  useHotkeys(
+    hk.prevTrack,
+    (e) => {
+      e.preventDefault();
+      handlePrevTrack();
+    },
+    [hk.prevTrack, handlePrevTrack]
+  );
+  useHotkeys(
+    hk.volumeUp,
+    (e) => {
+      e.preventDefault();
+      const v = Math.min(1, Math.round((localVolume + 0.05) * 100) / 100);
+      setLocalVolume(v);
+      dispatch(setVolume(v));
+    },
+    [hk.volumeUp, localVolume]
+  );
+  useHotkeys(
+    hk.volumeDown,
+    (e) => {
+      e.preventDefault();
+      const v = Math.max(0, Math.round((localVolume - 0.05) * 100) / 100);
+      setLocalVolume(v);
+      dispatch(setVolume(v));
+    },
+    [hk.volumeDown, localVolume]
+  );
+  useHotkeys(
+    hk.mute,
+    (e) => {
+      e.preventDefault();
+      setMuted((m) => !m);
+    },
+    [hk.mute]
+  );
 
   useEffect(() => {
     if (sleepTimerSeconds === null) return undefined;

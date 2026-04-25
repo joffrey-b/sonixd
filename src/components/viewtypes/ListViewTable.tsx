@@ -176,7 +176,7 @@ const ListViewTable = ({
   const [sortedCount, setSortedCount] = useState(0);
 
   useHotkeys(
-    'ctrl+a',
+    configState.hotkeys.selectAll,
     (e: KeyboardEvent) => {
       e.preventDefault();
       if (multiSelect.selected.length === data.length) {
@@ -186,7 +186,7 @@ const ListViewTable = ({
         dispatch(setSelected(sortColumn && !nowPlaying ? sortedData : data));
       }
     },
-    [multiSelect.selected, data]
+    [multiSelect.selected, data, configState.hotkeys.selectAll]
   );
 
   const handleSortColumn = (column: any, type: any) => {
