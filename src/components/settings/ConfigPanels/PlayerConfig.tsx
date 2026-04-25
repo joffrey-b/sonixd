@@ -9,8 +9,6 @@ import {
   StyledInput,
   StyledInputGroup,
   StyledInputNumber,
-  StyledInputPicker,
-  StyledInputPickerContainer,
   StyledLink,
   StyledPanel,
   StyledToggle,
@@ -19,18 +17,12 @@ import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 import i18n from '../../../i18n/i18n';
 import { setPlaybackSetting } from '../../../redux/playQueueSlice';
 import ListViewTable from '../../viewtypes/ListViewTable';
-import { appendPlaybackFilter, setAudioDeviceId, setPlayer } from '../../../redux/configSlice';
-import { notifyToast } from '../../shared/toast';
+import { appendPlaybackFilter } from '../../../redux/configSlice';
 import ConfigOption from '../ConfigOption';
 import { Server } from '../../../types';
 import { isWindows, isWindows10 } from '../../../shared/utils';
 import Popup from '../../shared/Popup';
 import { settings } from '../../shared/setDefaultSettings';
-
-const getAudioDevice = async () => {
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  return (devices || []).filter((dev: MediaDeviceInfo) => dev.kind === 'audiooutput');
-};
 
 const playbackFilterColumns = [
   {
@@ -83,64 +75,14 @@ const PlayerConfig = ({ bordered }: any) => {
   );
   const [resume, setResume] = useState(Boolean(settings.get('resume')));
   const [scrobble, setScrobble] = useState(Boolean(settings.get('scrobble')));
-  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>();
-  const audioDevicePickerContainerRef = useRef(null);
   const transcodingRestartWhisper = useRef<WhisperInstance>();
 
   useEffect(() => {
     settings.set('playbackFilters', config.playback.filters);
   }, [config.playback.filters]);
 
-  useEffect(() => {
-    const refreshAudioDevices = () => {
-      getAudioDevice()
-        .then((dev) => {
-          setAudioDevices(dev);
-          if (
-            config.playback.audioDeviceId &&
-            !dev.find((d) => d.deviceId === config.playback.audioDeviceId)
-          ) {
-            notifyToast(
-              'warning',
-              t('Selected audio device is no longer available. Using system default.')
-            );
-          }
-          return null;
-        })
-        .catch(() => notifyToast('error', t('Error fetching audio devices')));
-    };
-
-    refreshAudioDevices();
-    navigator.mediaDevices.addEventListener('devicechange', refreshAudioDevices);
-    return () => navigator.mediaDevices.removeEventListener('devicechange', refreshAudioDevices);
-  }, [t, config.playback.audioDeviceId]);
-
   return (
     <ConfigPanel bordered={bordered} header={t('Player')}>
-      <ConfigOption
-        name={t('Audio Device')}
-        description={t(
-          'The audio device for Sonixd. Leaving this blank will use the system default.'
-        )}
-        option={
-          <StyledInputPickerContainer ref={audioDevicePickerContainerRef}>
-            <StyledInputPicker
-              container={() => audioDevicePickerContainerRef.current}
-              data={audioDevices}
-              defaultValue={config.playback.audioDeviceId}
-              value={config.playback.audioDeviceId}
-              labelKey="label"
-              valueKey="deviceId"
-              placement="bottomStart"
-              placeholder={t('Select')}
-              onChange={(e: string) => {
-                dispatch(setAudioDeviceId(e));
-                settings.set('audioDeviceId', e);
-              }}
-            />
-          </StyledInputPickerContainer>
-        }
-      />
       <ConfigOption
         name={t('Seek Forward')}
         description={t(
@@ -344,21 +286,6 @@ const PlayerConfig = ({ bordered }: any) => {
           }
         />
       )}
-
-      <ConfigOption
-        name={t('System Notifications')}
-        description={<>{t('Show a system notification whenever the song changes.')}</>}
-        option={
-          <StyledToggle
-            defaultChecked={config.player.systemNotifications}
-            checked={config.player.systemNotifications}
-            onChange={(e: boolean) => {
-              settings.set('systemNotifications', e);
-              dispatch(setPlayer({ systemNotifications: e }));
-            }}
-          />
-        }
-      />
 
       <ConfigOption
         name={t('Scrobble')}

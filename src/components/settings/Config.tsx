@@ -13,7 +13,6 @@ import PlaybackConfig from './ConfigPanels/PlaybackConfig';
 import LookAndFeelConfig from './ConfigPanels/LookAndFeelConfig';
 import PlayerConfig from './ConfigPanels/PlayerConfig';
 import CacheConfig from './ConfigPanels/CacheConfig';
-import AdvancedConfig from './ConfigPanels/AdvancedConfig';
 import WindowConfig from './ConfigPanels/WindowConfig';
 import packageJson from '../../package.json';
 import ServerConfig from './ConfigPanels/ServerConfig';
@@ -35,7 +34,6 @@ const Config = () => {
   const folder = useAppSelector((state) => state.folder);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
-  const showWindowConfig = process.platform === 'darwin';
 
   const { data: latestRelease } = useQuery(
     ['github'],
@@ -91,7 +89,7 @@ const Config = () => {
       id="settings"
       header={
         <GenericPageHeader
-          title={t('Config')}
+          title={t('Configuration')}
           subtitle={
             <>
               <Nav
@@ -108,6 +106,17 @@ const Config = () => {
                   }}
                 >
                   {t('Playback')}
+                </StyledNavItem>
+                <StyledNavItem
+                  eventKey="equalizer"
+                  onKeyDown={(e: any) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      dispatch(setActive({ ...config.active, tab: 'equalizer' }));
+                    }
+                  }}
+                >
+                  {t('Equalizer')}
                 </StyledNavItem>
                 <StyledNavItem
                   eventKey="lookandfeel"
@@ -132,15 +141,26 @@ const Config = () => {
                   {t('Keyboard Shortcuts')}
                 </StyledNavItem>
                 <StyledNavItem
-                  eventKey="other"
+                  eventKey="system"
                   onKeyDown={(e: any) => {
                     if (e.key === ' ' || e.key === 'Enter') {
                       e.preventDefault();
-                      dispatch(setActive({ ...config.active, tab: 'other' }));
+                      dispatch(setActive({ ...config.active, tab: 'system' }));
                     }
                   }}
                 >
-                  {t('Other')}
+                  {t('System')}
+                </StyledNavItem>
+                <StyledNavItem
+                  eventKey="integrations"
+                  onKeyDown={(e: any) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      dispatch(setActive({ ...config.active, tab: 'integrations' }));
+                    }
+                  }}
+                >
+                  {t('Integrations')}
                 </StyledNavItem>
               </Nav>
             </>
@@ -243,6 +263,11 @@ const Config = () => {
         <>
           <PlaybackConfig bordered />
           <PlayerConfig bordered />
+        </>
+      )}
+
+      {config.active.tab === 'equalizer' && (
+        <>
           <EQConfig bordered />
           <PEQConfig bordered />
         </>
@@ -252,15 +277,15 @@ const Config = () => {
 
       {config.active.tab === 'shortcuts' && <KeyboardShortcutsConfig bordered />}
 
-      {config.active.tab === 'other' && (
+      {config.active.tab === 'system' && (
         <>
           <ServerConfig bordered />
           <CacheConfig bordered />
-          {!showWindowConfig && <WindowConfig bordered />}
-          <ExternalConfig bordered />
-          <AdvancedConfig bordered />
+          <WindowConfig bordered />
         </>
       )}
+
+      {config.active.tab === 'integrations' && <ExternalConfig bordered />}
     </GenericPage>
   );
 };

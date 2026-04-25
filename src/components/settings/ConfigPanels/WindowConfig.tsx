@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ConfigOptionDescription, ConfigPanel } from '../styled';
 import { StyledToggle } from '../../shared/styled';
 import ConfigOption from '../ConfigOption';
-import { setWindow } from '../../../redux/configSlice';
+import { setPlayer, setWindow } from '../../../redux/configSlice';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 import { settings } from '../../shared/setDefaultSettings';
 
@@ -13,42 +13,61 @@ const WindowConfig = ({ bordered }: any) => {
   const config = useAppSelector((state) => state.config);
 
   return (
-    <ConfigPanel bordered={bordered} header={t('Window')}>
-      <ConfigOptionDescription>
-        {t(
-          'Note: These settings may not function correctly depending on your desktop environment.'
-        )}
-      </ConfigOptionDescription>
-
+    <ConfigPanel bordered={bordered} header={t('System')}>
       <ConfigOption
-        name={t('Minimize to Tray')}
-        description={t('Minimizes to the system tray.')}
+        name={t('System Notifications')}
+        description={t('Show a system notification whenever the song changes.')}
         option={
           <StyledToggle
-            defaultChecked={config.window.minimizeToTray}
-            checked={config.window.minimizeToTray}
+            defaultChecked={config.player.systemNotifications}
+            checked={config.player.systemNotifications}
             onChange={(e: boolean) => {
-              settings.set('minimizeToTray', e);
-              dispatch(setWindow({ minimizeToTray: e }));
+              settings.set('systemNotifications', e);
+              dispatch(setPlayer({ systemNotifications: e }));
             }}
           />
         }
       />
 
-      <ConfigOption
-        name={t('Exit to Tray')}
-        description={t('Exits to the system tray.')}
-        option={
-          <StyledToggle
-            defaultChecked={config.window.exitToTray}
-            checked={config.window.exitToTray}
-            onChange={(e: boolean) => {
-              settings.set('exitToTray', e);
-              dispatch(setWindow({ exitToTray: e }));
-            }}
+      {process.platform !== 'darwin' && (
+        <>
+          <ConfigOptionDescription>
+            {t(
+              'Note: These settings may not function correctly depending on your desktop environment.'
+            )}
+          </ConfigOptionDescription>
+
+          <ConfigOption
+            name={t('Minimize to Tray')}
+            description={t('Minimizes to the system tray.')}
+            option={
+              <StyledToggle
+                defaultChecked={config.window.minimizeToTray}
+                checked={config.window.minimizeToTray}
+                onChange={(e: boolean) => {
+                  settings.set('minimizeToTray', e);
+                  dispatch(setWindow({ minimizeToTray: e }));
+                }}
+              />
+            }
           />
-        }
-      />
+
+          <ConfigOption
+            name={t('Exit to Tray')}
+            description={t('Exits to the system tray.')}
+            option={
+              <StyledToggle
+                defaultChecked={config.window.exitToTray}
+                checked={config.window.exitToTray}
+                onChange={(e: boolean) => {
+                  settings.set('exitToTray', e);
+                  dispatch(setWindow({ exitToTray: e }));
+                }}
+              />
+            }
+          />
+        </>
+      )}
     </ConfigPanel>
   );
 };

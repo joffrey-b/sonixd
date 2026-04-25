@@ -298,7 +298,7 @@ const Sidebar = ({
                     }}
                     $show={config.lookAndFeel.sidebar.selected.includes('config')}
                   >
-                    {t('Config')}
+                    {t('Configuration')}
                   </SidebarNavItem>
                   <SidebarNavItem
                     tabIndex={0}

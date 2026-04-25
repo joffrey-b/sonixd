@@ -200,7 +200,7 @@ const DEFAULT_SETTINGS: Settings = {
   sidebar: {
     expand: true,
     width: '225px',
-    coverArt: true,
+    coverArt: false,
   },
   selected: [
     'dashboard',

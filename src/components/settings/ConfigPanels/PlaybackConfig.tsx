@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ButtonToolbar } from 'rsuite';
 import { useTranslation } from 'react-i18next';
 import { ConfigPanel } from '../styled';
@@ -9,18 +9,52 @@ import {
   StyledInputPickerContainer,
   StyledToggle,
 } from '../../shared/styled';
-import { useAppDispatch } from '../../../redux/hooks';
+import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
 import { setPlaybackSetting } from '../../../redux/playQueueSlice';
+import { setAudioDeviceId } from '../../../redux/configSlice';
+import { notifyToast } from '../../shared/toast';
 import ConfigOption from '../ConfigOption';
 import { settings } from '../../shared/setDefaultSettings';
+
+const getAudioDevice = async () => {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return (devices || []).filter((dev: MediaDeviceInfo) => dev.kind === 'audiooutput');
+};
 
 const PlaybackConfig = ({ bordered }: any) => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const config = useAppSelector((state) => state.config);
   const [crossfadeDuration, setCrossfadeDuration] = useState(Number(settings.get('fadeDuration')));
   const [pollingInterval, setPollingInterval] = useState(Number(settings.get('pollingInterval')));
   const [volumeFade, setVolumeFade] = useState(Boolean(settings.get('volumeFade')));
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>();
   const crossfadePickerContainerRef = useRef(null);
+  const audioDevicePickerContainerRef = useRef(null);
+
+  useEffect(() => {
+    const refreshAudioDevices = () => {
+      getAudioDevice()
+        .then((dev) => {
+          setAudioDevices(dev);
+          if (
+            config.playback.audioDeviceId &&
+            !dev.find((d) => d.deviceId === config.playback.audioDeviceId)
+          ) {
+            notifyToast(
+              'warning',
+              t('Selected audio device is no longer available. Using system default.')
+            );
+          }
+          return null;
+        })
+        .catch(() => notifyToast('error', t('Error fetching audio devices')));
+    };
+
+    refreshAudioDevices();
+    navigator.mediaDevices.addEventListener('devicechange', refreshAudioDevices);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', refreshAudioDevices);
+  }, [t, config.playback.audioDeviceId]);
 
   const handleSetCrossfadeDuration = (e: number) => {
     setCrossfadeDuration(e);
@@ -91,9 +125,7 @@ const PlaybackConfig = ({ bordered }: any) => {
 
         <ConfigOption
           name={t('Crossfade Type')}
-          description={t(
-            'The fade calculation to use when crossfading between two tracks. Enable the debug window to view the differences between each fade type.'
-          )}
+          description={t('The fade calculation to use when crossfading between two tracks.')}
           option={
             <StyledInputPickerContainer ref={crossfadePickerContainerRef}>
               <StyledInputPicker
@@ -185,6 +217,31 @@ const PlaybackConfig = ({ bordered }: any) => {
                 {t('Fade')}
               </StyledButton>
             </ButtonToolbar>
+          }
+        />
+
+        <ConfigOption
+          name={t('Audio Device')}
+          description={t(
+            'The audio device for Sonixd. Leaving this blank will use the system default.'
+          )}
+          option={
+            <StyledInputPickerContainer ref={audioDevicePickerContainerRef}>
+              <StyledInputPicker
+                container={() => audioDevicePickerContainerRef.current}
+                data={audioDevices}
+                defaultValue={config.playback.audioDeviceId}
+                value={config.playback.audioDeviceId}
+                labelKey="label"
+                valueKey="deviceId"
+                placement="bottomStart"
+                placeholder={t('Select')}
+                onChange={(e: string) => {
+                  dispatch(setAudioDeviceId(e));
+                  settings.set('audioDeviceId', e);
+                }}
+              />
+            </StyledInputPickerContainer>
           }
         />
       </ConfigPanel>
