@@ -287,7 +287,9 @@ const PlayerConfig = ({ bordered }: any) => {
               }
             >
               trusted accessibility client.
-            </StyledLink>
+            </StyledLink>{' '}
+            If you plan to bind media keys in the Keyboard Shortcuts tab, it is advised to disable
+            this option to avoid conflicts.
           </Trans>
         }
         option={
@@ -317,7 +319,7 @@ const PlayerConfig = ({ bordered }: any) => {
           description={
             <>
               {t(
-                'Enable or disable the Windows System Media Transport Controls (play/pause, next, previous, stop). This will show the Windows Media Popup (Windows 10 only) when pressing a media key. This feauture will override the Global Media Hotkeys option.'
+                'Enable or disable the Windows System Media Transport Controls (play/pause, next, previous, stop). This will show the Windows Media Popup (Windows 10 only) when pressing a media key. This feauture will override the Global Media Hotkeys option. If you plan to bind media keys in the Keyboard Shortcuts tab, it is advised to disable this option to avoid conflicts.'
               )}
             </>
           }
