@@ -60,9 +60,9 @@ function makeHannWindow(size: number): Float32Array {
   return w;
 }
 
-// black → blue → cyan → green → yellow → red
+// black → blue → cyan → green → yellow → red — range: -120 to 0 dB
 function dbToRgb(db: number): [number, number, number] {
-  const t = Math.max(0, Math.min(1, (db + 90) / 90));
+  const t = Math.max(0, Math.min(1, (db + 120) / 120));
   if (t < 0.25) return [0, 0, Math.round(t * 4 * 255)];
   if (t < 0.5) {
     const s = (t - 0.25) * 4;
@@ -76,10 +76,12 @@ function dbToRgb(db: number): [number, number, number] {
   return [255, Math.round((1 - s) * 255), 0];
 }
 
+// Linear frequency labels every 2 kHz (adapts to sample rate)
 function getFreqLabels(nyquist: number): number[] {
-  if (nyquist >= 40000) return [100, 500, 1000, 2000, 5000, 10000, 20000, 30000, 40000];
-  if (nyquist >= 25000) return [100, 500, 1000, 2000, 5000, 10000, 20000];
-  return [100, 500, 1000, 2000, 5000, 10000, 16000];
+  const step = nyquist >= 40000 ? 5000 : nyquist >= 25000 ? 4000 : 2000;
+  const labels: number[] = [];
+  for (let f = step; f < nyquist; f += step) labels.push(f);
+  return labels;
 }
 
 // Canvas pixel layout
@@ -212,18 +214,13 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, CW, CH);
 
-        // Frequency mapping
-        const minLogFreq = Math.log10(20);
-        const maxLogFreq = Math.log10(nyquist);
+        // Linear frequency mapping: row 0 = top = nyquist, row CH-1 = bottom = 0 Hz
         const freqPerBin = nyquist / (FFT_SIZE / 2);
         const rowToBin = new Int32Array(CH);
         for (let row = 0; row < CH; row++) {
-          const t = (CH - 1 - row) / (CH - 1);
-          const logF = minLogFreq + t * (maxLogFreq - minLogFreq);
-          rowToBin[row] = Math.min(
-            FFT_SIZE / 2 - 1,
-            Math.max(0, Math.round(10 ** logF / freqPerBin))
-          );
+          const t = (CH - 1 - row) / (CH - 1); // 0 at bottom, 1 at top
+          const freq = t * nyquist;
+          rowToBin[row] = Math.min(FFT_SIZE / 2 - 1, Math.max(0, Math.round(freq / freqPerBin)));
         }
 
         // Compute and draw spectrogram
@@ -239,7 +236,7 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
           for (let row = 0; row < CH; row++) {
             const bin = rowToBin[row];
             const mag = Math.sqrt(re[bin] * re[bin] + im[bin] * im[bin]);
-            const db = mag > 1e-10 ? 20 * Math.log10(mag / (FFT_SIZE / 2)) : -90;
+            const db = mag > 1e-10 ? 20 * Math.log10(mag / (FFT_SIZE / 2)) : -120;
             const [r, g, b] = dbToRgb(db);
             const idx = (row * SPEC_W + frame) * 4;
             imgData.data[idx] = r;
@@ -257,23 +254,22 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
 
+        // Separator line
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(AX_L, 0, 1, CH);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+
         // Top label = nyquist
         const nyqLabel = nyquist >= 1000 ? `${Math.round(nyquist / 1000)}k` : `${nyquist}`;
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
         ctx.fillText(nyqLabel, AX_L - 4, 10);
 
         // Bottom label = 0
         ctx.fillText('0', AX_L - 4, CH - 2);
 
-        // Separator line
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(AX_L, 0, 1, CH);
-
-        // Intermediate freq labels + grid lines
+        // Intermediate freq labels + grid lines (linear spacing)
         for (const freq of getFreqLabels(nyquist)) {
-          if (freq >= nyquist) continue;
-          const t = (Math.log10(freq) - minLogFreq) / (maxLogFreq - minLogFreq);
-          const y = Math.round((1 - t) * (CH - 1));
+          const y = Math.round((1 - freq / nyquist) * (CH - 1));
           const label = freq >= 1000 ? `${freq / 1000}k` : `${freq}`;
           ctx.fillStyle = 'rgba(255,255,255,0.08)';
           ctx.fillRect(SPEC_X + 1, y, SPEC_W - 1, 1);
@@ -288,8 +284,8 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         // Gradient bar
         const gradImgData = ctx.createImageData(GRAD_W, CH);
         for (let y = 0; y < CH; y++) {
-          // top = 0 dB, bottom = -90 dB
-          const db = -90 + ((CH - 1 - y) / (CH - 1)) * 90;
+          // top = 0 dB, bottom = -120 dB
+          const db = -120 + ((CH - 1 - y) / (CH - 1)) * 120;
           const [r, g, b] = dbToRgb(db);
           for (let x = 0; x < GRAD_W; x++) {
             const idx = (y * GRAD_W + x) * 4;
@@ -301,17 +297,17 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         }
         ctx.putImageData(gradImgData, GRAD_X, 0);
 
-        // dB labels
+        // dB labels every 10 dB, clamped so text never clips the edge
         ctx.font = '10px monospace';
         ctx.textAlign = 'left';
-        const dbStops = [0, -20, -40, -60, -90];
-        for (const db of dbStops) {
-          const t = (db + 90) / 90;
+        for (let db = 0; db >= -120; db -= 10) {
+          const t = (db + 120) / 120;
           const y = Math.round((1 - t) * (CH - 1));
+          const textY = Math.max(10, Math.min(CH - 3, y + 4));
           ctx.fillStyle = 'rgba(255,255,255,0.3)';
           ctx.fillRect(GRAD_X - 2, y, 2, 1);
           ctx.fillStyle = 'rgba(255,255,255,0.7)';
-          ctx.fillText(`${db} dB`, GRAD_X + GRAD_W + 4, y + 4);
+          ctx.fillText(`${db} dB`, GRAD_X + GRAD_W + 4, textY);
         }
 
         setStatus('done');
