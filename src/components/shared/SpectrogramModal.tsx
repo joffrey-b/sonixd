@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { InfoModal } from '../modal/Modal';
+import styled from 'styled-components';
 
 // Cooley-Tukey in-place FFT (power-of-2 size)
 function fft(re: Float32Array, im: Float32Array) {
@@ -11,11 +11,15 @@ function fft(re: Float32Array, im: Float32Array) {
     if (i < j) {
       // eslint-disable-next-line no-param-reassign
       let t = re[i];
+      // eslint-disable-next-line no-param-reassign
       re[i] = re[j];
+      // eslint-disable-next-line no-param-reassign
       re[j] = t;
       // eslint-disable-next-line no-param-reassign
       t = im[i];
+      // eslint-disable-next-line no-param-reassign
       im[i] = im[j];
+      // eslint-disable-next-line no-param-reassign
       im[j] = t;
     }
   }
@@ -56,13 +60,10 @@ function makeHannWindow(size: number): Float32Array {
   return w;
 }
 
-// Maps a dB value in [-90, 0] to an RGB color.
 // black → blue → cyan → green → yellow → red
 function dbToRgb(db: number): [number, number, number] {
   const t = Math.max(0, Math.min(1, (db + 90) / 90));
-  if (t < 0.25) {
-    return [0, 0, Math.round(t * 4 * 255)];
-  }
+  if (t < 0.25) return [0, 0, Math.round(t * 4 * 255)];
   if (t < 0.5) {
     const s = (t - 0.25) * 4;
     return [0, Math.round(s * 255), 255];
@@ -75,6 +76,81 @@ function dbToRgb(db: number): [number, number, number] {
   return [255, Math.round((1 - s) * 255), 0];
 }
 
+function getFreqLabels(nyquist: number): number[] {
+  if (nyquist >= 40000) return [100, 500, 1000, 2000, 5000, 10000, 20000, 30000, 40000];
+  if (nyquist >= 25000) return [100, 500, 1000, 2000, 5000, 10000, 20000];
+  return [100, 500, 1000, 2000, 5000, 10000, 16000];
+}
+
+// Canvas pixel layout
+const CW = 1500; // total canvas width
+const CH = 520; // total canvas height
+const AX_L = 48; // left freq-axis strip width
+const GRAD_GAP = 8; // gap between spectrogram and gradient
+const GRAD_W = 18; // color gradient bar width
+const LABEL_W = 46; // dB label area width
+const AX_R = GRAD_GAP + GRAD_W + LABEL_W; // = 72 total right strip
+const SPEC_X = AX_L; // spectrogram starts here
+const SPEC_W = CW - AX_L - AX_R; // = 1380
+const GRAD_X = SPEC_X + SPEC_W + GRAD_GAP; // gradient bar x
+const FFT_SIZE = 2048;
+
+const Backdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+`;
+
+const Container = styled.div`
+  resize: both;
+  overflow: hidden;
+  min-width: 500px;
+  min-height: 320px;
+  width: 860px;
+  height: 520px;
+  background: #111;
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.9);
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  font-size: 0.88em;
+  opacity: 0.75;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+`;
+
+const CloseBtn = styled.button`
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1.1em;
+  line-height: 1;
+  opacity: 0.6;
+  padding: 2px 4px;
+  &:hover {
+    opacity: 1;
+  }
+`;
+
+const CanvasArea = styled.div`
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  background: #000;
+`;
+
 interface Props {
   show: boolean;
   handleHide: () => void;
@@ -83,10 +159,6 @@ interface Props {
   artist?: string;
 }
 
-const CANVAS_WIDTH = 760;
-const CANVAS_HEIGHT = 400;
-const FFT_SIZE = 2048;
-
 const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
@@ -94,10 +166,9 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
   useEffect(() => {
     if (!show) {
       setStatus('idle');
-      return;
+      return undefined;
     }
-    if (!streamUrl) return;
-
+    if (!streamUrl) return undefined;
     setStatus('loading');
 
     let cancelled = false;
@@ -105,7 +176,8 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
     (async () => {
       try {
         const response = await fetch(streamUrl);
-        if (!response.ok || cancelled) throw new Error('fetch failed');
+        if (cancelled) return;
+        if (!response.ok) throw new Error('fetch failed');
         const arrayBuffer = await response.arrayBuffer();
         if (cancelled) return;
 
@@ -123,13 +195,10 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         const samples = new Float32Array(totalSamples);
         for (let c = 0; c < numChannels; c++) {
           const ch = audioBuffer.getChannelData(c);
-          for (let i = 0; i < totalSamples; i++) {
-            samples[i] += ch[i] / numChannels;
-          }
+          for (let i = 0; i < totalSamples; i++) samples[i] += ch[i] / numChannels;
         }
 
-        // Use exactly CANVAS_WIDTH frames so each column = 1 pixel
-        const numFrames = CANVAS_WIDTH;
+        const numFrames = SPEC_W;
         const hopSize = Math.max(1, Math.floor((totalSamples - FFT_SIZE) / numFrames));
         const hann = makeHannWindow(FFT_SIZE);
         const re = new Float32Array(FFT_SIZE);
@@ -138,22 +207,27 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         const canvas = canvasRef.current;
         if (!canvas || cancelled) return;
         const ctx = canvas.getContext('2d')!;
-        const imgData = ctx.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
-        const pixels = imgData.data;
 
-        // Precompute log-frequency mapping: each canvas row → FFT bin
+        // Background
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, CW, CH);
+
+        // Frequency mapping
         const minLogFreq = Math.log10(20);
         const maxLogFreq = Math.log10(nyquist);
         const freqPerBin = nyquist / (FFT_SIZE / 2);
-        const rowToBin = new Int32Array(CANVAS_HEIGHT);
-        for (let row = 0; row < CANVAS_HEIGHT; row++) {
-          // row 0 = top = high frequency
-          const t = (CANVAS_HEIGHT - 1 - row) / (CANVAS_HEIGHT - 1);
+        const rowToBin = new Int32Array(CH);
+        for (let row = 0; row < CH; row++) {
+          const t = (CH - 1 - row) / (CH - 1);
           const logF = minLogFreq + t * (maxLogFreq - minLogFreq);
-          const freq = 10 ** logF;
-          rowToBin[row] = Math.min(FFT_SIZE / 2 - 1, Math.max(0, Math.round(freq / freqPerBin)));
+          rowToBin[row] = Math.min(
+            FFT_SIZE / 2 - 1,
+            Math.max(0, Math.round(10 ** logF / freqPerBin))
+          );
         }
 
+        // Compute and draw spectrogram
+        const imgData = ctx.createImageData(SPEC_W, CH);
         for (let frame = 0; frame < numFrames; frame++) {
           if (cancelled) return;
           const offset = frame * hopSize;
@@ -162,36 +236,82 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
             im[i] = 0;
           }
           fft(re, im);
-
-          for (let row = 0; row < CANVAS_HEIGHT; row++) {
+          for (let row = 0; row < CH; row++) {
             const bin = rowToBin[row];
             const mag = Math.sqrt(re[bin] * re[bin] + im[bin] * im[bin]);
             const db = mag > 1e-10 ? 20 * Math.log10(mag / (FFT_SIZE / 2)) : -90;
             const [r, g, b] = dbToRgb(db);
-            const idx = (row * CANVAS_WIDTH + frame) * 4;
-            pixels[idx] = r;
-            pixels[idx + 1] = g;
-            pixels[idx + 2] = b;
-            pixels[idx + 3] = 255;
+            const idx = (row * SPEC_W + frame) * 4;
+            imgData.data[idx] = r;
+            imgData.data[idx + 1] = g;
+            imgData.data[idx + 2] = b;
+            imgData.data[idx + 3] = 255;
           }
         }
-
         if (cancelled) return;
-        ctx.putImageData(imgData, 0, 0);
+        ctx.putImageData(imgData, SPEC_X, 0);
 
-        // Frequency axis labels and grid lines
-        const freqLabels = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 16000, 20000];
+        // Frequency axis (left strip, dark bg, labels)
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, AX_L, CH);
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
-        for (const freq of freqLabels) {
-          if (freq > nyquist) continue;
+
+        // Top label = nyquist
+        const nyqLabel = nyquist >= 1000 ? `${Math.round(nyquist / 1000)}k` : `${nyquist}`;
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillText(nyqLabel, AX_L - 4, 10);
+
+        // Bottom label = 0
+        ctx.fillText('0', AX_L - 4, CH - 2);
+
+        // Separator line
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(AX_L, 0, 1, CH);
+
+        // Intermediate freq labels + grid lines
+        for (const freq of getFreqLabels(nyquist)) {
+          if (freq >= nyquist) continue;
           const t = (Math.log10(freq) - minLogFreq) / (maxLogFreq - minLogFreq);
-          const y = Math.round((1 - t) * (CANVAS_HEIGHT - 1));
+          const y = Math.round((1 - t) * (CH - 1));
           const label = freq >= 1000 ? `${freq / 1000}k` : `${freq}`;
-          ctx.fillStyle = 'rgba(255,255,255,0.15)';
-          ctx.fillRect(0, y, CANVAS_WIDTH - 28, 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.08)';
+          ctx.fillRect(SPEC_X + 1, y, SPEC_W - 1, 1);
           ctx.fillStyle = 'rgba(255,255,255,0.7)';
-          ctx.fillText(label, CANVAS_WIDTH - 2, y + 4);
+          ctx.fillText(label, AX_L - 4, y + 4);
+        }
+
+        // Color bar (right strip)
+        ctx.fillStyle = '#111';
+        ctx.fillRect(SPEC_X + SPEC_W, 0, AX_R, CH);
+
+        // Gradient bar
+        const gradImgData = ctx.createImageData(GRAD_W, CH);
+        for (let y = 0; y < CH; y++) {
+          // top = 0 dB, bottom = -90 dB
+          const db = -90 + ((CH - 1 - y) / (CH - 1)) * 90;
+          const [r, g, b] = dbToRgb(db);
+          for (let x = 0; x < GRAD_W; x++) {
+            const idx = (y * GRAD_W + x) * 4;
+            gradImgData.data[idx] = r;
+            gradImgData.data[idx + 1] = g;
+            gradImgData.data[idx + 2] = b;
+            gradImgData.data[idx + 3] = 255;
+          }
+        }
+        ctx.putImageData(gradImgData, GRAD_X, 0);
+
+        // dB labels
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'left';
+        const dbStops = [0, -20, -40, -60, -90];
+        for (const db of dbStops) {
+          const t = (db + 90) / 90;
+          const y = Math.round((1 - t) * (CH - 1));
+          ctx.fillStyle = 'rgba(255,255,255,0.3)';
+          ctx.fillRect(GRAD_X - 2, y, 2, 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.fillText(`${db} dB`, GRAD_X + GRAD_W + 4, y + 4);
         }
 
         setStatus('done');
@@ -200,7 +320,6 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
       }
     })();
 
-    // eslint-disable-next-line consistent-return
     return () => {
       cancelled = true;
     };
@@ -208,30 +327,65 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
 
   const label = [artist, title].filter(Boolean).join(' — ');
 
+  if (!show) return null;
+
   return (
-    <InfoModal width="820px" show={show} handleHide={handleHide}>
-      <div style={{ padding: '8px 0 4px', textAlign: 'center', opacity: 0.75, fontSize: '0.9em' }}>
-        {label}
-      </div>
-      {status === 'loading' && (
-        <div
-          style={{ padding: '4px 0 6px', textAlign: 'center', opacity: 0.55, fontSize: '0.82em' }}
-        >
-          Analyzing audio...
-        </div>
-      )}
-      {status === 'error' && (
-        <div style={{ padding: '8px', color: '#e06c75', textAlign: 'center' }}>
-          Failed to load audio for analysis.
-        </div>
-      )}
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_WIDTH}
-        height={CANVAS_HEIGHT}
-        style={{ display: 'block', width: '100%', background: '#000' }}
-      />
-    </InfoModal>
+    <Backdrop
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleHide();
+      }}
+    >
+      <Container>
+        <Header>
+          <span>{label}</span>
+          <CloseBtn onClick={handleHide}>✕</CloseBtn>
+        </Header>
+        <CanvasArea>
+          <canvas
+            ref={canvasRef}
+            width={CW}
+            height={CH}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              display: 'block',
+            }}
+          />
+          {status === 'loading' && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: '0.85em',
+              }}
+            >
+              Analyzing audio...
+            </div>
+          )}
+          {status === 'error' && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#e06c75',
+                fontSize: '0.85em',
+              }}
+            >
+              Failed to load audio for analysis.
+            </div>
+          )}
+        </CanvasArea>
+      </Container>
+    </Backdrop>
   );
 };
 
