@@ -212,8 +212,10 @@ const PlayerConfig = ({ bordered }: any) => {
         }
       />
       <ConfigOption
-        name={t('Resume Playback')}
-        description={t('Resumes the player queue on startup.')}
+        name={t('Persist queue across sessions')}
+        description={t(
+          'Saves your entire play queue and restores it on next launch, including your position in the queue.'
+        )}
         option={
           <StyledToggle
             defaultChecked={resume}
@@ -369,6 +371,27 @@ const PlayerConfig = ({ bordered }: any) => {
               settings.set('scrobble', e);
               dispatch(setPlaybackSetting({ setting: 'scrobble', value: e }));
               setScrobble(e);
+            }}
+          />
+        }
+      />
+      <ConfigOption
+        name={t('Scrobble Threshold')}
+        description={t(
+          'Percentage of a track that must be played before it is scrobbled. A track is also scrobbled after 4 minutes regardless of this setting.'
+        )}
+        option={
+          <StyledInputNumber
+            defaultValue={String(settings.get('scrobbleThreshold') ?? 90)}
+            step={5}
+            min={1}
+            max={100}
+            width={125}
+            disabled={!scrobble}
+            onChange={(e: any) => {
+              const val = Math.min(100, Math.max(1, Number(e)));
+              settings.set('scrobbleThreshold', val);
+              dispatch(setPlaybackSetting({ setting: 'scrobbleThreshold', value: val }));
             }}
           />
         }

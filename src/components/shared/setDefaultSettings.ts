@@ -88,6 +88,7 @@ interface Settings {
   volumeFade: boolean;
   preservePlayNextOrder: boolean;
   directPreviousTrack: boolean;
+  scrobbleThreshold: number;
   repeat: string;
   shuffle: string;
   scrollWithCurrentSong: boolean;
@@ -222,6 +223,7 @@ const DEFAULT_SETTINGS: Settings = {
   volumeFade: false,
   preservePlayNextOrder: true,
   directPreviousTrack: false,
+  scrobbleThreshold: 90,
   repeat: 'none',
   shuffle: 'false',
   scrollWithCurrentSong: true,

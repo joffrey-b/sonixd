@@ -39,6 +39,7 @@ export interface PlayQueue {
   preservePlayNextOrder: boolean;
   directPreviousTrack: boolean;
   stopAfterCurrent: boolean;
+  scrobbleThreshold: number;
   currentIndex: number;
   currentSongId: string;
   currentSongUniqueId: string;
@@ -99,6 +100,7 @@ const initialState: PlayQueue = {
   preservePlayNextOrder: Boolean(parsedSettings.preservePlayNextOrder),
   directPreviousTrack: Boolean(parsedSettings.directPreviousTrack),
   stopAfterCurrent: false,
+  scrobbleThreshold: Number(parsedSettings.scrobbleThreshold) || 90,
   currentIndex: 0,
   currentSongId: '',
   currentSongUniqueId: '',
@@ -280,6 +282,9 @@ const playQueueSlice = createSlice({
           break;
         case 'directPreviousTrack':
           state.directPreviousTrack = action.payload.value;
+          break;
+        case 'scrobbleThreshold':
+          state.scrobbleThreshold = action.payload.value;
           break;
         case 'showDebugWindow':
           state.showDebugWindow = action.payload.value;

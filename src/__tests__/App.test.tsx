@@ -63,6 +63,7 @@ const playQueueState: PlayQueue = {
   preservePlayNextOrder: true,
   directPreviousTrack: false,
   stopAfterCurrent: false,
+  scrobbleThreshold: 90,
   currentIndex: 0,
   currentSongId: '',
   currentSongUniqueId: '',

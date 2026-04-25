@@ -43,7 +43,8 @@ const gaplessListenHandler = (
   scrobbled: boolean,
   setScrobbled: any,
   serverType: Server,
-  duration: number
+  duration: number,
+  scrobbleThreshold: number
 ) => {
   const currentSeek = currentPlayerRef.current?.audioEl.current?.currentTime || 0;
 
@@ -62,13 +63,13 @@ const gaplessListenHandler = (
   // Conditions for scrobbling gapless track
   // 1. Scrobble enabled in settings
   // 2. Not already scrobbled
-  // 3. Track reached past 4 minutes or past the 90% mark
+  // 3. Track reached past 4 minutes or past the scrobble threshold percentage
   // 4. Not in the last 2 seconds of the track (gapless player starts second track before first ends)
   // Step 4 sets the scrobbled value to false again which would trigger a second scrobble
   if (
     shouldScrobble &&
     !scrobbled &&
-    (currentSeek >= 240 || currentSeek >= duration * 0.9) &&
+    (currentSeek >= 240 || currentSeek >= duration * (scrobbleThreshold / 100)) &&
     currentSeek <= duration - 2
   ) {
     setScrobbled(true);
@@ -100,7 +101,8 @@ const listenHandler = (
   scrobbled: boolean,
   setScrobbled: any,
   serverType: Server,
-  duration: number
+  duration: number,
+  scrobbleThreshold: number
 ) => {
   // Jellyfin only returns the duration in the last ~2 seconds of the song so we need to pass the
   // duration into the handler instead of fetching it here
@@ -227,12 +229,12 @@ const listenHandler = (
   // Conditions for scrobbling fading track
   // 1. Scrobble enabled in settings
   // 2. Not already scrobbled
-  // 3. Track reached past 4 minutes or past the fadeAtTime - 15 seconds
+  // 3. Track reached past 4 minutes or past the scrobble threshold percentage
   // 4. The track is not fading
   if (
     shouldScrobble &&
     !scrobbled &&
-    (currentSeek >= 240 || currentSeek >= fadeAtTime - 15) &&
+    (currentSeek >= 240 || currentSeek >= duration * (scrobbleThreshold / 100)) &&
     currentSeek <= fadeAtTime
   ) {
     setScrobbled(true);
@@ -564,7 +566,8 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       scrobbled,
       setScrobbled,
       config.serverType,
-      playQueue[currentEntryList][playQueue.player1.index]?.duration
+      playQueue[currentEntryList][playQueue.player1.index]?.duration,
+      playQueue.scrobbleThreshold
     );
   }, [config.serverType, currentEntryList, dispatch, playQueue, scrobbled]);
 
@@ -584,7 +587,8 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       scrobbled,
       setScrobbled,
       config.serverType,
-      playQueue[currentEntryList][playQueue.player2.index]?.duration
+      playQueue[currentEntryList][playQueue.player2.index]?.duration,
+      playQueue.scrobbleThreshold
     );
   }, [config.serverType, currentEntryList, dispatch, playQueue, scrobbled]);
 
@@ -733,7 +737,8 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       config.serverType,
       config.serverType === Server.Subsonic
         ? player1Ref.current?.audioEl.current.duration
-        : playQueue[currentEntryList][playQueue.player1.index]?.duration
+        : playQueue[currentEntryList][playQueue.player1.index]?.duration,
+      playQueue.scrobbleThreshold
     );
   }, [config.serverType, currentEntryList, playQueue, scrobbled]);
 
@@ -749,7 +754,8 @@ const Player = ({ currentEntryList, muted, children }: any, ref: any) => {
       config.serverType,
       config.serverType === Server.Subsonic
         ? player2Ref.current?.audioEl.current.duration
-        : playQueue[currentEntryList][playQueue.player2.index]?.duration
+        : playQueue[currentEntryList][playQueue.player2.index]?.duration,
+      playQueue.scrobbleThreshold
     );
   }, [config.serverType, currentEntryList, playQueue, scrobbled]);
 
