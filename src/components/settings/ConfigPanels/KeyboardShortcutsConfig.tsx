@@ -25,14 +25,40 @@ const Td = styled.td`
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 `;
 
-const KeyBadge = styled.span<{ $listening: boolean }>`
+const CancelButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1em;
+  padding: 0 4px;
+  margin-left: 4px;
+  line-height: 1;
+  vertical-align: middle;
+  &:hover {
+    color: rgba(255, 255, 255, 0.9);
+  }
+`;
+
+const KeyBadge = styled.span<{ $listening: boolean; $conflict: boolean }>`
   display: inline-block;
   padding: 3px 10px;
   border-radius: 3px;
   font-family: monospace;
   font-size: 0.88em;
-  background: ${(p) => (p.$listening ? 'rgba(33,150,243,0.3)' : 'rgba(255,255,255,0.08)')};
-  border: 1px solid ${(p) => (p.$listening ? 'rgba(33,150,243,0.7)' : 'rgba(255,255,255,0.15)')};
+  background: ${(p) =>
+    p.$conflict
+      ? 'rgba(220,53,69,0.25)'
+      : p.$listening
+      ? 'rgba(33,150,243,0.3)'
+      : 'rgba(255,255,255,0.08)'};
+  border: 1px solid
+    ${(p) =>
+      p.$conflict
+        ? 'rgba(220,53,69,0.7)'
+        : p.$listening
+        ? 'rgba(33,150,243,0.7)'
+        : 'rgba(255,255,255,0.15)'};
   cursor: pointer;
   min-width: 140px;
   text-align: center;
@@ -106,11 +132,13 @@ const KeyboardShortcutsConfig = ({ bordered }: any) => {
   const dispatch = useAppDispatch();
   const hotkeys = useAppSelector((state) => state.config.hotkeys);
   const [listening, setListening] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<string | null>(null);
 
   const save = (action: string, key: string) => {
     dispatch(setHotkey({ action: action as any, key }));
     settings.set(SETTING_KEY_MAP[action], key);
     setListening(null);
+    setConflict(null);
   };
 
   const ROWS: Array<{ action: string; label: string }> = [
@@ -150,8 +178,14 @@ const KeyboardShortcutsConfig = ({ bordered }: any) => {
                 <Td>
                   <KeyBadge
                     $listening={isListening}
+                    $conflict={isListening && conflict !== null}
                     tabIndex={0}
-                    onClick={() => setListening(isListening ? null : action)}
+                    onClick={() => {
+                      if (!isListening) {
+                        setListening(action);
+                        setConflict(null);
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (!isListening) {
                         if (e.key === 'Enter' || e.key === ' ') setListening(action);
@@ -159,14 +193,42 @@ const KeyboardShortcutsConfig = ({ bordered }: any) => {
                       }
                       if (e.key === 'Escape') {
                         setListening(null);
+                        setConflict(null);
                         return;
                       }
                       const captured = captureKey(e);
-                      if (captured) save(action, captured);
+                      if (captured) {
+                        const takenBy = ROWS.find(
+                          (r) =>
+                            r.action !== action &&
+                            hotkeys[r.action as keyof typeof hotkeys] === captured
+                        );
+                        if (takenBy) {
+                          setConflict(takenBy.label);
+                        } else {
+                          setConflict(null);
+                          save(action, captured);
+                        }
+                      }
                     }}
                   >
-                    {isListening ? t('Press a key...') : formatKey(currentKey)}
+                    {isListening && conflict
+                      ? t('Used by: {{label}}', { label: conflict })
+                      : isListening
+                      ? t('Press a key...')
+                      : formatKey(currentKey)}
                   </KeyBadge>
+                  {isListening && (
+                    <CancelButton
+                      tabIndex={0}
+                      onClick={() => {
+                        setListening(null);
+                        setConflict(null);
+                      }}
+                    >
+                      &#x2715;
+                    </CancelButton>
+                  )}
                 </Td>
               </tr>
             );
