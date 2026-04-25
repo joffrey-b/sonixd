@@ -191,6 +191,7 @@ const KeyboardShortcutsConfig = ({ bordered }: any) => {
                         if (e.key === 'Enter' || e.key === ' ') setListening(action);
                         return;
                       }
+                      e.nativeEvent.stopPropagation();
                       if (e.key === 'Escape') {
                         setListening(null);
                         setConflict(null);

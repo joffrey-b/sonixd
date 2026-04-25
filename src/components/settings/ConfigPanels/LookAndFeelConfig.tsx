@@ -86,7 +86,12 @@ export const ListViewConfigPanel = ({ bordered }: any) => {
   const currentGenreColumns = genreCols?.map((column: any) => column.label) || [];
 
   return (
-    <ConfigPanel header={t('List View')} bordered={bordered}>
+    <ConfigPanel header={t('List View Layout Editor')} bordered={bordered}>
+      <ConfigOptionDescription>
+        {t(
+          'Customize the columns, row height, and font size for each list view (Songs, Albums, Playlists, etc.). Select a view tab below, then drag columns to reorder them or toggle them on and off.'
+        )}
+      </ConfigOptionDescription>
       <Nav
         activeKey={config.active.columnSelectorTab}
         onSelect={(e) => dispatch(setActive({ ...config.active, columnSelectorTab: e }))}
