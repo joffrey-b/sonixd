@@ -380,6 +380,7 @@ export const moveSelectedToIndex = (
   selectedEntries: any,
   moveBeforeId: string | number | undefined
 ) => {
+  if (!entryData || !selectedEntries) return entryData;
   const uniqueIds = _.map(selectedEntries, 'uniqueId');
 
   // Remove the selected entries from the queue

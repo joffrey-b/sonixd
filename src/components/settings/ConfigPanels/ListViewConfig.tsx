@@ -81,13 +81,15 @@ const ListViewConfig = ({
 
   const handleDragEnd = (listType: ColumnList) => {
     if (multiSelect.isDragging) {
-      dispatch(
-        moveToIndex({
-          entries: multiSelect.selected,
-          moveBeforeId: multiSelect.currentMouseOverId,
-          listType,
-        })
-      );
+      if (multiSelect.currentMouseOverId) {
+        dispatch(
+          moveToIndex({
+            entries: multiSelect.selected,
+            moveBeforeId: multiSelect.currentMouseOverId,
+            listType,
+          })
+        );
+      }
       dispatch(setIsDragging(false));
     }
   };
