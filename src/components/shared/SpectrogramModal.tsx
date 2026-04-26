@@ -76,6 +76,31 @@ function dbToRgb(db: number): [number, number, number] {
   return [255, Math.round((1 - s) * 255), 0];
 }
 
+// Probe the native sample rate from WAV or FLAC headers before decoding,
+// so AudioContext can be created at the correct rate and avoid resampling.
+function probeNativeSampleRate(buf: ArrayBuffer): number {
+  const b = new Uint8Array(buf, 0, Math.min(buf.byteLength, 32));
+  // WAV: "RIFF" at 0, "WAVE" at 8, sample rate = LE uint32 at bytes 24-27
+  if (
+    b[0] === 0x52 &&
+    b[1] === 0x49 &&
+    b[2] === 0x46 &&
+    b[3] === 0x46 &&
+    b[8] === 0x57 &&
+    b[9] === 0x41 &&
+    b[10] === 0x56 &&
+    b[11] === 0x45
+  ) {
+    return new DataView(buf).getUint32(24, true);
+  }
+  // FLAC: "fLaC" at 0, STREAMINFO data starts at byte 8,
+  // sample rate occupies bits 80-99 of STREAMINFO = top 20 bits of bytes 18-20
+  if (b[0] === 0x66 && b[1] === 0x4c && b[2] === 0x61 && b[3] === 0x43) {
+    return ((b[18] << 12) | (b[19] << 4) | (b[20] >> 4)) & 0xfffff;
+  }
+  return 0; // unknown format — let AudioContext use its default
+}
+
 // Linear frequency labels every 2 kHz (adapts to sample rate)
 function getFreqLabels(nyquist: number): number[] {
   const step = nyquist >= 40000 ? 5000 : nyquist >= 25000 ? 4000 : 2000;
@@ -183,7 +208,11 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         const arrayBuffer = await response.arrayBuffer();
         if (cancelled) return;
 
-        const audioCtx = new window.AudioContext();
+        const nativeRate = probeNativeSampleRate(arrayBuffer);
+        const audioCtx =
+          nativeRate > 0
+            ? new window.AudioContext({ sampleRate: nativeRate })
+            : new window.AudioContext();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
         audioCtx.close();
         if (cancelled) return;
