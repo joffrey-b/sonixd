@@ -71,6 +71,7 @@ const PlaylistView = ({ ...rest }) => {
   const history = useHistory();
   const queryClient = useQueryClient();
   const editTriggerRef = useRef<any>();
+  const tableRef = useRef<any>();
   const { id } = useParams<PlaylistParams>();
   const playlistId = rest.id ? rest.id : id;
   const { isLoading, isError, data, error }: any = useQuery(['playlist', playlistId], () =>
@@ -610,6 +611,7 @@ const PlaylistView = ({ ...rest }) => {
       }
     >
       <ListViewType
+        ref={tableRef}
         data={misc.searchQuery !== '' ? filteredData : playlist[getCurrentEntryList(playlist)]}
         tableColumns={config.lookAndFeel.listView.music.columns}
         handleRowClick={handleRowClick}

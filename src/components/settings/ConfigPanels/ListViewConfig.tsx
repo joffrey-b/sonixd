@@ -65,6 +65,7 @@ const ListViewConfig = ({
   const [selectedColumns, setSelectedColumns] = useState<any[]>([]);
   const columnListType = settingsConfig.columnList.split('List')[0];
   const columnPickerContainerRef = useRef(null);
+  const tableRef = useRef<any>();
 
   useEffect(() => {
     const cols = config.lookAndFeel.listView[columnListType].columns.map((col: any) => {
@@ -150,6 +151,7 @@ const ListViewConfig = ({
             />
           </StyledInputPickerContainer>
           <ListViewTable
+            tableRef={tableRef}
             data={config.lookAndFeel.listView[columnListType].columns || []}
             height={200}
             handleRowClick={handleRowClick}
