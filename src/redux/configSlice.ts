@@ -30,6 +30,7 @@ export interface ConfigPage {
   };
   player: {
     systemNotifications: boolean;
+    globalShortcuts: boolean;
   };
   lookAndFeel: {
     font: string;
@@ -124,6 +125,7 @@ const initialState: ConfigPage = {
   },
   player: {
     systemNotifications: parsedSettings.systemNotifications,
+    globalShortcuts: parsedSettings.globalShortcuts || false,
   },
   sort: {
     albumListPage: undefined,

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { ipcRenderer } from 'electron';
 import { useHotkeys } from 'react-hotkeys-hook';
 import axios from 'axios';
 import { useQueryClient } from 'react-query';
@@ -58,6 +59,7 @@ const PlayerBar = () => {
   const [currentEntryList, setCurrentEntryList] = useState('entry');
   const [localVolume, setLocalVolume] = useState(Number(settings.get('volume')));
   const [muted, setMuted] = useState(false);
+  const localVolumeRef = useRef(localVolume);
   const [showCoverArtModal, setShowCoverArtModal] = useState(false);
   const [showLyricsModal, setShowLyricsModal] = useState(false);
   const [sleepTimerSeconds, setSleepTimerSeconds] = useState<number | null>(null);
@@ -298,6 +300,39 @@ const PlayerBar = () => {
     },
     [hk.mute]
   );
+
+  useEffect(() => {
+    localVolumeRef.current = localVolume;
+  }, [localVolume]);
+
+  useEffect(() => {
+    ipcRenderer.on('player-volume-up', () => {
+      const v = Math.min(1, Math.round((localVolumeRef.current + 0.05) * 100) / 100);
+      setLocalVolume(v);
+      dispatch(setVolume(v));
+    });
+    ipcRenderer.on('player-volume-down', () => {
+      const v = Math.max(0, Math.round((localVolumeRef.current - 0.05) * 100) / 100);
+      setLocalVolume(v);
+      dispatch(setVolume(v));
+    });
+    ipcRenderer.on('player-mute', () => {
+      setMuted((m) => !m);
+    });
+    return () => {
+      ipcRenderer.removeAllListeners('player-volume-up');
+      ipcRenderer.removeAllListeners('player-volume-down');
+      ipcRenderer.removeAllListeners('player-mute');
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (config.player.globalShortcuts) {
+      ipcRenderer.send('enable-global-shortcuts');
+    } else {
+      ipcRenderer.send('disable-global-shortcuts');
+    }
+  }, [config.player.globalShortcuts, config.hotkeys]);
 
   useEffect(() => {
     if (sleepTimerSeconds === null) return undefined;

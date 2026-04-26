@@ -160,6 +160,7 @@ const configState: ConfigPage = {
   sort: {},
   player: {
     systemNotifications: false,
+    globalShortcuts: false,
   },
   serverType: Server.Subsonic,
   lookAndFeel: {

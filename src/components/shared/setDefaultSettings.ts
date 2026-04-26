@@ -56,6 +56,7 @@ interface Settings {
   startPage: string;
   scrobble: boolean;
   systemNotifications: boolean;
+  globalShortcuts: boolean;
   musicFolder: {
     id: null | string;
     albums: boolean;
@@ -188,6 +189,7 @@ const DEFAULT_SETTINGS: Settings = {
   startPage: '/',
   scrobble: true,
   systemNotifications: false,
+  globalShortcuts: false,
   musicFolder: {
     id: null,
     albums: true,

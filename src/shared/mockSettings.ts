@@ -36,6 +36,7 @@ export const mockSettings = {
   fadeDuration: 9,
   fadeType: 'equalPower',
   systemNotifications: false,
+  globalShortcuts: false,
   scrobble: false,
   transcode: false,
   sidebar: {

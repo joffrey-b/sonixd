@@ -127,6 +127,86 @@ const previousTrack = () => {
   mainWindow.webContents.send('player-prev-track');
 };
 
+const volumeUp = () => {
+  mainWindow.webContents.send('player-volume-up');
+};
+
+const volumeDown = () => {
+  mainWindow.webContents.send('player-volume-down');
+};
+
+const toggleMute = () => {
+  mainWindow.webContents.send('player-mute');
+};
+
+const toAccelerator = (key) =>
+  key
+    .split('+')
+    .map((part) => {
+      if (part === 'ctrl') return 'CommandOrControl';
+      if (part === 'alt') return 'Alt';
+      if (part === 'shift') return 'Shift';
+      if (part === 'meta') return 'Meta';
+      if (part === 'left') return 'Left';
+      if (part === 'right') return 'Right';
+      if (part === 'up') return 'Up';
+      if (part === 'down') return 'Down';
+      if (part === 'del') return 'Delete';
+      if (part === 'backspace') return 'Backspace';
+      if (part === 'space') return 'Space';
+      if (part === 'esc') return 'Escape';
+      return part.toUpperCase();
+    })
+    .join('+');
+
+let customShortcutKeys = [];
+
+const unregisterCustomShortcuts = () => {
+  customShortcutKeys.forEach((acc) => {
+    try {
+      globalShortcut.unregister(acc);
+    } catch {
+      // ignore
+    }
+  });
+  customShortcutKeys = [];
+};
+
+const registerCustomShortcuts = (hotkeys) => {
+  unregisterCustomShortcuts();
+  const actions = {
+    playPause: () => playPause(),
+    nextTrack: () => nextTrack(),
+    prevTrack: () => previousTrack(),
+    volumeUp: () => volumeUp(),
+    volumeDown: () => volumeDown(),
+    mute: () => toggleMute(),
+  };
+  Object.entries(actions).forEach(([action, handler]) => {
+    const key = hotkeys[action];
+    if (!key) return;
+    const accelerator = toAccelerator(key);
+    try {
+      if (globalShortcut.register(accelerator, handler)) {
+        customShortcutKeys.push(accelerator);
+      }
+    } catch {
+      // invalid accelerator - skip
+    }
+  });
+};
+
+const registerCustomShortcutsFromSettings = () => {
+  registerCustomShortcuts({
+    playPause: settings.get('hotkeyPlayPause') || 'ctrl+p',
+    nextTrack: settings.get('hotkeyNextTrack') || 'ctrl+right',
+    prevTrack: settings.get('hotkeyPrevTrack') || 'ctrl+left',
+    volumeUp: settings.get('hotkeyVolumeUp') || 'ctrl+up',
+    volumeDown: settings.get('hotkeyVolumeDown') || 'ctrl+down',
+    mute: settings.get('hotkeyMute') || 'ctrl+m',
+  });
+};
+
 const quickSave = () => {
   mainWindow.webContents.send('save-queue-state', app.getPath('userData'));
 };
@@ -245,6 +325,18 @@ const createWindow = async () => {
     });
   }
 
+  if (settings.get('globalShortcuts')) {
+    registerCustomShortcutsFromSettings();
+  }
+
+  ipcMain.on('enable-global-shortcuts', () => {
+    registerCustomShortcutsFromSettings();
+  });
+
+  ipcMain.on('disable-global-shortcuts', () => {
+    unregisterCustomShortcuts();
+  });
+
   ipcMain.on('quicksave', () => {
     quickSave();
   });
@@ -271,6 +363,11 @@ const createWindow = async () => {
 
   ipcMain.on('disableGlobalHotkeys', () => {
     globalShortcut.unregisterAll();
+    customShortcutKeys = [];
+
+    if (settings.get('globalShortcuts')) {
+      registerCustomShortcutsFromSettings();
+    }
 
     if (!settings.get('systemMediaTransportControls')) {
       electronLocalshortcut.register(mainWindow, 'MediaStop', () => {

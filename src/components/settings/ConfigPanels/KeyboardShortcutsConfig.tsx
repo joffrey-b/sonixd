@@ -3,7 +3,9 @@ import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
 import { ConfigPanel } from '../styled';
 import { useAppDispatch, useAppSelector } from '../../../redux/hooks';
-import { setHotkey } from '../../../redux/configSlice';
+import { setHotkey, setPlayer } from '../../../redux/configSlice';
+import { StyledToggle } from '../../shared/styled';
+import ConfigOption from '../ConfigOption';
 import { settings } from '../../shared/setDefaultSettings';
 
 const Table = styled.table`
@@ -131,6 +133,7 @@ const KeyboardShortcutsConfig = ({ bordered }: any) => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const hotkeys = useAppSelector((state) => state.config.hotkeys);
+  const globalShortcuts = useAppSelector((state) => state.config.player.globalShortcuts);
   const [listening, setListening] = useState<string | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
 
@@ -156,7 +159,23 @@ const KeyboardShortcutsConfig = ({ bordered }: any) => {
 
   return (
     <ConfigPanel bordered={bordered} header={t('Keyboard Shortcuts')}>
-      <p style={{ opacity: 0.55, fontSize: '0.85em', marginBottom: 12 }}>
+      <ConfigOption
+        name={t('Global shortcuts')}
+        description={t(
+          'When enabled, the 6 playback shortcuts (play/pause, next, previous, volume, mute) work even when the app is not focused. Useful if you have no media keys.'
+        )}
+        option={
+          <StyledToggle
+            defaultChecked={globalShortcuts}
+            checked={globalShortcuts}
+            onChange={(e: boolean) => {
+              settings.set('globalShortcuts', e);
+              dispatch(setPlayer({ globalShortcuts: e }));
+            }}
+          />
+        }
+      />
+      <p style={{ opacity: 0.55, fontSize: '0.85em', margin: '16px 0 12px' }}>
         {t(
           'Click a shortcut to change it, then press the new key combination. Press Escape to cancel.'
         )}
