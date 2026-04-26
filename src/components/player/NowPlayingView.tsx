@@ -11,7 +11,6 @@ import {
   clearPlayQueue,
   shuffleInPlace,
   toggleShuffle,
-  setPlaybackSetting,
   removeFromPlayQueue,
   setPlayQueue,
   appendPlayQueue,
@@ -33,7 +32,6 @@ import {
 } from '../shared/ToolbarButtons';
 import {
   StyledButton,
-  StyledCheckbox,
   StyledInputNumber,
   StyledInputPicker,
   StyledInputPickerContainer,
@@ -127,17 +125,15 @@ const NowPlayingView = () => {
   );
 
   useEffect(() => {
-    if (playQueue.scrollWithCurrentSong) {
-      setTimeout(() => {
-        const rowHeight = Number(settings.get('musicListRowHeight'));
-        tableRef?.current?.table.current?.scrollTop(
-          rowHeight * playQueue.currentIndex - rowHeight * 2 > 0
-            ? rowHeight * playQueue.currentIndex - rowHeight * 2
-            : 0
-        );
-      }, 100);
-    }
-  }, [playQueue.currentIndex, playQueue.scrollWithCurrentSong, tableRef]);
+    setTimeout(() => {
+      const rowHeight = Number(settings.get('musicListRowHeight'));
+      tableRef?.current?.table.current?.scrollTop(
+        rowHeight * playQueue.currentIndex - rowHeight * 2 > 0
+          ? rowHeight * playQueue.currentIndex - rowHeight * 2
+          : 0
+      );
+    }, 100);
+  }, [playQueue.currentIndex, tableRef]);
 
   const { handleRowClick, handleRowDoubleClick, handleDragEnd } = useListClickHandler({
     dnd: 'playQueue',
@@ -429,23 +425,7 @@ const NowPlayingView = () => {
                 </ButtonToolbar>
               </>
             }
-            subsidetitle={
-              <StyledCheckbox
-                defaultChecked={playQueue.scrollWithCurrentSong}
-                checked={playQueue.scrollWithCurrentSong}
-                onChange={(_v: any, e: boolean) => {
-                  settings.set('scrollWithCurrentSong', e);
-                  dispatch(
-                    setPlaybackSetting({
-                      setting: 'scrollWithCurrentSong',
-                      value: e,
-                    })
-                  );
-                }}
-              >
-                {t('Auto scroll')}
-              </StyledCheckbox>
-            }
+            subsidetitle={<></>}
           />
         }
       >
@@ -476,11 +456,6 @@ const NowPlayingView = () => {
             disabledContextMenuOptions={['deletePlaylist', 'viewInModal']}
             handleFavorite={handleFavorite}
             handleRating={(rowData: any, rating: number) => handleRating(rowData, { rating })}
-            initialScrollOffset={
-              playQueue.scrollWithCurrentSong
-                ? 0
-                : Number(localStorage.getItem('scroll_list_nowPlaying'))
-            }
             onScroll={(scrollIndex: number) => {
               localStorage.setItem('scroll_list_nowPlaying', String(Math.abs(scrollIndex)));
             }}

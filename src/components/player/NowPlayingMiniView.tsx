@@ -11,7 +11,6 @@ import {
   clearPlayQueue,
   shuffleInPlace,
   toggleShuffle,
-  setPlaybackSetting,
   removeFromPlayQueue,
   setPlayQueue,
   appendPlayQueue,
@@ -23,7 +22,6 @@ import ListViewType from '../viewtypes/ListViewType';
 import GenericPage from '../layout/GenericPage';
 import {
   StyledButton,
-  StyledCheckbox,
   StyledInputNumber,
   StyledInputPicker,
   StyledInputPickerContainer,
@@ -117,20 +115,18 @@ const NowPlayingMiniView = () => {
   );
 
   useEffect(() => {
-    if (playQueue.scrollWithCurrentSong) {
-      const rowHeight = Number(settings.get('miniListRowHeight'));
-      const scrollPosition =
-        rowHeight * playQueue.currentIndex - rowHeight * 2 > 0
-          ? rowHeight * playQueue.currentIndex - rowHeight * 2
-          : 0;
+    const rowHeight = Number(settings.get('miniListRowHeight'));
+    const scrollPosition =
+      rowHeight * playQueue.currentIndex - rowHeight * 2 > 0
+        ? rowHeight * playQueue.currentIndex - rowHeight * 2
+        : 0;
 
-      setInitialScroll(scrollPosition);
+    setInitialScroll(scrollPosition);
 
-      setTimeout(() => {
-        tableRef?.current?.table.current.scrollTop(scrollPosition);
-      }, 100);
-    }
-  }, [playQueue.currentIndex, tableRef, playQueue.displayQueue, playQueue.scrollWithCurrentSong]);
+    setTimeout(() => {
+      tableRef?.current?.table.current.scrollTop(scrollPosition);
+    }, 100);
+  }, [playQueue.currentIndex, tableRef, playQueue.displayQueue]);
 
   const { handleRowClick, handleRowDoubleClick, handleDragEnd } = useListClickHandler({
     dnd: 'playQueue',
@@ -419,23 +415,6 @@ const NowPlayingMiniView = () => {
                         {playQueue.entry?.length || '...'}
                       </StyledTag>
                     </ButtonToolbar>
-                  </FlexboxGrid.Item>
-                  <FlexboxGrid.Item>
-                    <StyledCheckbox
-                      defaultChecked={playQueue.scrollWithCurrentSong}
-                      checked={playQueue.scrollWithCurrentSong}
-                      onChange={(_v: any, e: boolean) => {
-                        settings.set('scrollWithCurrentSong', e);
-                        dispatch(
-                          setPlaybackSetting({
-                            setting: 'scrollWithCurrentSong',
-                            value: e,
-                          })
-                        );
-                      }}
-                    >
-                      {t('Auto scroll')}
-                    </StyledCheckbox>
                   </FlexboxGrid.Item>
                 </FlexboxGrid>
               </>

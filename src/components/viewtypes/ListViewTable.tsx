@@ -199,6 +199,7 @@ const ListViewTable = ({
   const mouseYRef = useRef<number>(0);
   const dragScrollRafRef = useRef<number | null>(null);
   const currentDragDataRef = useRef<any>(null);
+  const isDragOriginRef = useRef(false);
 
   useHotkeys(
     configState.hotkeys.selectAll,
@@ -458,7 +459,7 @@ const ListViewTable = ({
   useEffect(() => {
     if (!dnd) return undefined;
 
-    if (multiSelect.isDragging) {
+    if (multiSelect.isDragging && isDragOriginRef.current) {
       const ZONE = 60;
       const SPEED = 8;
 
@@ -480,6 +481,7 @@ const ListViewTable = ({
       dragScrollRafRef.current = requestAnimationFrame(tick);
 
       const onDocumentMouseUp = () => {
+        isDragOriginRef.current = false;
         document.body.style.cursor = 'default';
         handleDragEnd(currentDragDataRef.current);
         if (nowPlaying && playQueue.currentPlayer === 1) {
@@ -722,6 +724,7 @@ const ListViewTable = ({
                                     index: rowIndex,
                                   })
                                 );
+                                isDragOriginRef.current = true;
                                 dispatch(setIsDragging(true));
                               }
 
@@ -733,6 +736,7 @@ const ListViewTable = ({
                                     index: rowIndex,
                                   })
                                 );
+                                isDragOriginRef.current = true;
                                 dispatch(setIsDragging(true));
                               }
                             }
