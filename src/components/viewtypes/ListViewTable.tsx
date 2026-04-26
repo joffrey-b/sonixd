@@ -133,6 +133,27 @@ const StyledTable = styled(Table)<{ rowHeight: number; $isDragging: boolean }>`
   user-select: none;
 `;
 
+const DragHandleCell = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+
+  .row-index {
+    display: inline;
+  }
+  .drag-icon {
+    display: none;
+  }
+
+  &:hover .row-index {
+    display: none;
+  }
+  &:hover .drag-icon {
+    display: inline-flex;
+  }
+`;
+
 const ListViewTable = ({
   tableRef,
   height,
@@ -668,6 +689,13 @@ const ListViewTable = ({
                     >
                       {rowData.isDir ? (
                         <Icon size="lg" icon="folder-open" style={{ color: '#FFD662' }} />
+                      ) : dnd ? (
+                        <DragHandleCell>
+                          <span className="row-index">{rowIndex + 1}</span>
+                          <span className="drag-icon">
+                            <Icon icon="bars" />
+                          </span>
+                        </DragHandleCell>
                       ) : (
                         rowIndex + 1
                       )}

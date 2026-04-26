@@ -15,8 +15,8 @@ import {
   removeFromPlayQueue,
   setPlayQueue,
   appendPlayQueue,
-  moveToTop,
-  moveToBottom,
+  moveUp,
+  moveDown,
 } from '../../redux/playQueueSlice';
 import { setStatus } from '../../redux/playerSlice';
 import ListViewType from '../viewtypes/ListViewType';
@@ -382,7 +382,7 @@ const NowPlayingMiniView = () => {
                         size="xs"
                         appearance="subtle"
                         onClick={() => {
-                          dispatch(moveToTop({ selectedEntries: multiSelect.selected }));
+                          dispatch(moveUp({ selectedEntries: multiSelect.selected }));
                           if (playQueue.currentPlayer === 1) {
                             dispatch(fixPlayer2Index());
                           }
@@ -392,7 +392,7 @@ const NowPlayingMiniView = () => {
                         size="xs"
                         appearance="subtle"
                         onClick={() => {
-                          dispatch(moveToBottom({ selectedEntries: multiSelect.selected }));
+                          dispatch(moveDown({ selectedEntries: multiSelect.selected }));
                           if (playQueue.currentPlayer === 1) {
                             dispatch(fixPlayer2Index());
                           }

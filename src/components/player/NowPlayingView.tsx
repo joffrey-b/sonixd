@@ -15,8 +15,8 @@ import {
   removeFromPlayQueue,
   setPlayQueue,
   appendPlayQueue,
-  moveToTop,
-  moveToBottom,
+  moveUp,
+  moveDown,
 } from '../../redux/playQueueSlice';
 import { clearSelected } from '../../redux/multiSelectSlice';
 import GenericPage from '../layout/GenericPage';
@@ -49,7 +49,6 @@ import {
 import { notifyToast } from '../shared/toast';
 import { apiController } from '../../api/controller';
 import { Server, Song } from '../../types';
-import NowPlayingInfoView from './NowPlayingInfoView';
 import CenterLoader from '../loader/CenterLoader';
 import useListClickHandler from '../../hooks/useListClickHandler';
 import Popup from '../shared/Popup';
@@ -77,7 +76,6 @@ const NowPlayingView = () => {
   const [randomPlaylistGenre, setRandomPlaylistGenre] = useState<string | undefined>(undefined);
   const [isLoadingRandom, setIsLoadingRandom] = useState(false);
   const [musicFolder, setMusicFolder] = useState(folder.musicFolder);
-  const [infoMode, setInfoMode] = useState(settings.get('infoMode') ?? false);
 
   const { data: musicFolders } = useQuery(['musicFolders'], () =>
     apiController({ serverType: config.serverType, endpoint: 'getMusicFolders' })
@@ -239,14 +237,10 @@ const NowPlayingView = () => {
           <GenericPageHeader
             title={
               <>
-                {!infoMode && (
-                  <>
-                    {t('Now Playing')}{' '}
-                    <StyledTag style={{ verticalAlign: 'middle', cursor: 'default' }}>
-                      {playQueue.entry?.length || '...'}
-                    </StyledTag>
-                  </>
-                )}
+                {t('Now Playing')}{' '}
+                <StyledTag style={{ verticalAlign: 'middle', cursor: 'default' }}>
+                  {playQueue.entry?.length || '...'}
+                </StyledTag>
               </>
             }
             subtitle={
@@ -394,81 +388,63 @@ const NowPlayingView = () => {
                   >
                     <AutoPlaylistButton size="sm" />
                   </Whisper>
-                  <StyledButton
-                    size="sm"
-                    onClick={() => {
-                      settings.set('infoMode', !infoMode);
-                      setInfoMode(!infoMode);
-                    }}
-                  >
-                    <Icon icon="info-circle" />
-                  </StyledButton>
-                  {!infoMode && (
-                    <ButtonGroup>
-                      <MoveTopButton
-                        size="sm"
-                        appearance="subtle"
-                        onClick={() => {
-                          dispatch(moveToTop({ selectedEntries: multiSelect.selected }));
-
+                  <ButtonGroup>
+                    <MoveTopButton
+                      size="sm"
+                      appearance="subtle"
+                      onClick={() => {
+                        dispatch(moveUp({ selectedEntries: multiSelect.selected }));
+                        if (playQueue.currentPlayer === 1) {
+                          dispatch(fixPlayer2Index());
+                        }
+                      }}
+                    />
+                    <MoveBottomButton
+                      size="sm"
+                      appearance="subtle"
+                      onClick={() => {
+                        dispatch(moveDown({ selectedEntries: multiSelect.selected }));
+                        if (playQueue.currentPlayer === 1) {
+                          dispatch(fixPlayer2Index());
+                        }
+                      }}
+                    />
+                    <RemoveSelectedButton
+                      size="sm"
+                      appearance="subtle"
+                      onClick={() => {
+                        if (multiSelect.selected.length === playQueue.entry.length) {
+                          dispatch(clearPlayQueue());
+                          dispatch(setStatus('PAUSED'));
+                        } else {
+                          dispatch(removeFromPlayQueue({ entries: multiSelect.selected }));
+                          dispatch(clearSelected());
                           if (playQueue.currentPlayer === 1) {
                             dispatch(fixPlayer2Index());
                           }
-                        }}
-                      />
-                      <MoveBottomButton
-                        size="sm"
-                        appearance="subtle"
-                        onClick={() => {
-                          dispatch(moveToBottom({ selectedEntries: multiSelect.selected }));
-
-                          if (playQueue.currentPlayer === 1) {
-                            dispatch(fixPlayer2Index());
-                          }
-                        }}
-                      />
-                      <RemoveSelectedButton
-                        size="sm"
-                        appearance="subtle"
-                        onClick={() => {
-                          if (multiSelect.selected.length === playQueue.entry.length) {
-                            // Clear the queue instead of removing individually
-                            dispatch(clearPlayQueue());
-                            dispatch(setStatus('PAUSED'));
-                          } else {
-                            dispatch(removeFromPlayQueue({ entries: multiSelect.selected }));
-                            dispatch(clearSelected());
-                            if (playQueue.currentPlayer === 1) {
-                              dispatch(fixPlayer2Index());
-                            }
-                          }
-                        }}
-                      />
-                    </ButtonGroup>
-                  )}
+                        }
+                      }}
+                    />
+                  </ButtonGroup>
                 </ButtonToolbar>
               </>
             }
             subsidetitle={
-              <>
-                {!infoMode && (
-                  <StyledCheckbox
-                    defaultChecked={playQueue.scrollWithCurrentSong}
-                    checked={playQueue.scrollWithCurrentSong}
-                    onChange={(_v: any, e: boolean) => {
-                      settings.set('scrollWithCurrentSong', e);
-                      dispatch(
-                        setPlaybackSetting({
-                          setting: 'scrollWithCurrentSong',
-                          value: e,
-                        })
-                      );
-                    }}
-                  >
-                    {t('Auto scroll')}
-                  </StyledCheckbox>
-                )}
-              </>
+              <StyledCheckbox
+                defaultChecked={playQueue.scrollWithCurrentSong}
+                checked={playQueue.scrollWithCurrentSong}
+                onChange={(_v: any, e: boolean) => {
+                  settings.set('scrollWithCurrentSong', e);
+                  dispatch(
+                    setPlaybackSetting({
+                      setting: 'scrollWithCurrentSong',
+                      value: e,
+                    })
+                  );
+                }}
+              >
+                {t('Auto scroll')}
+              </StyledCheckbox>
             }
           />
         }
@@ -476,44 +452,39 @@ const NowPlayingView = () => {
         {!playQueue ? (
           <CenterLoader />
         ) : (
-          <>
-            {infoMode && <NowPlayingInfoView />}
-            {!infoMode && (
-              <ListViewType
-                ref={tableRef}
-                data={
-                  misc.searchQuery !== '' ? filteredData : playQueue[getCurrentEntryList(playQueue)]
-                }
-                currentIndex={playQueue.currentIndex}
-                tableColumns={config.lookAndFeel.listView.music.columns}
-                handleRowClick={handleRowClick}
-                handleRowDoubleClick={handleRowDoubleClick}
-                handleDragEnd={handleDragEnd}
-                virtualized
-                rowHeight={config.lookAndFeel.listView.music.rowHeight}
-                fontSize={config.lookAndFeel.listView.music.fontSize}
-                cacheImages={{
-                  enabled: settings.get('cacheImages'),
-                  cacheType: 'album',
-                  cacheIdProperty: 'albumId',
-                }}
-                listType="music"
-                nowPlaying
-                dnd
-                disabledContextMenuOptions={['deletePlaylist', 'viewInModal']}
-                handleFavorite={handleFavorite}
-                handleRating={(rowData: any, rating: number) => handleRating(rowData, { rating })}
-                initialScrollOffset={
-                  playQueue.scrollWithCurrentSong
-                    ? 0
-                    : Number(localStorage.getItem('scroll_list_nowPlaying'))
-                }
-                onScroll={(scrollIndex: number) => {
-                  localStorage.setItem('scroll_list_nowPlaying', String(Math.abs(scrollIndex)));
-                }}
-              />
-            )}
-          </>
+          <ListViewType
+            ref={tableRef}
+            data={
+              misc.searchQuery !== '' ? filteredData : playQueue[getCurrentEntryList(playQueue)]
+            }
+            currentIndex={playQueue.currentIndex}
+            tableColumns={config.lookAndFeel.listView.music.columns}
+            handleRowClick={handleRowClick}
+            handleRowDoubleClick={handleRowDoubleClick}
+            handleDragEnd={handleDragEnd}
+            virtualized
+            rowHeight={config.lookAndFeel.listView.music.rowHeight}
+            fontSize={config.lookAndFeel.listView.music.fontSize}
+            cacheImages={{
+              enabled: settings.get('cacheImages'),
+              cacheType: 'album',
+              cacheIdProperty: 'albumId',
+            }}
+            listType="music"
+            nowPlaying
+            dnd
+            disabledContextMenuOptions={['deletePlaylist', 'viewInModal']}
+            handleFavorite={handleFavorite}
+            handleRating={(rowData: any, rating: number) => handleRating(rowData, { rating })}
+            initialScrollOffset={
+              playQueue.scrollWithCurrentSong
+                ? 0
+                : Number(localStorage.getItem('scroll_list_nowPlaying'))
+            }
+            onScroll={(scrollIndex: number) => {
+              localStorage.setItem('scroll_list_nowPlaying', String(Math.abs(scrollIndex)));
+            }}
+          />
         )}
       </GenericPage>
     </>

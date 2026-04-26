@@ -200,9 +200,9 @@ export const MoveDownButton = ({ ...rest }) => {
 
 export const MoveTopButton = ({ ...rest }) => {
   return (
-    <CustomTooltip text={i18n.t('Move selected to top')}>
-      <StyledButton aria-label={i18n.t('Move selected to top')} {...rest} tabIndex={0}>
-        <Icon icon="arrow-up2" />
+    <CustomTooltip text={i18n.t('Move up')}>
+      <StyledButton aria-label={i18n.t('Move up')} {...rest} tabIndex={0}>
+        <Icon icon="angle-up" />
       </StyledButton>
     </CustomTooltip>
   );
@@ -210,9 +210,9 @@ export const MoveTopButton = ({ ...rest }) => {
 
 export const MoveBottomButton = ({ ...rest }) => {
   return (
-    <CustomTooltip text={i18n.t('Move selected to bottom')}>
-      <StyledButton aria-label={i18n.t('Move selected to bottom')} {...rest} tabIndex={0}>
-        <Icon icon="arrow-down2" />
+    <CustomTooltip text={i18n.t('Move down')}>
+      <StyledButton aria-label={i18n.t('Move down')} {...rest} tabIndex={0}>
+        <Icon icon="angle-down" />
       </StyledButton>
     </CustomTooltip>
   );

@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid/non-secure';
 import { useQuery, useQueryClient } from 'react-query';
 import { useHistory } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { ButtonToolbar, Col, Grid, Form, Icon, Row, Whisper } from 'rsuite';
+import { ButtonToolbar, Form, Whisper } from 'rsuite';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import {
   addModalPage,
@@ -17,25 +17,12 @@ import {
   appendPlayQueue,
   clearPlayQueue,
   fixPlayer2Index,
-  moveDown,
-  moveToBottom,
-  moveToIndex,
-  moveToTop,
-  moveUp,
   removeFromPlayQueue,
   setPlayQueue,
   setRate,
   setStar,
 } from '../../redux/playQueueSlice';
-import {
-  moveToIndex as plMoveToIndex,
-  moveToBottom as plMoveToBottom,
-  moveToTop as plMoveToTop,
-  moveUp as plMoveUp,
-  moveDown as plMoveDown,
-  removeFromPlaylist,
-  setPlaylistRate,
-} from '../../redux/playlistSlice';
+import { removeFromPlaylist, setPlaylistRate } from '../../redux/playlistSlice';
 import {
   ContextMenuDivider,
   ContextMenuWindow,
@@ -43,20 +30,16 @@ import {
   StyledInputPicker,
   StyledButton,
   StyledInputGroup,
-  StyledInputNumber,
   StyledInputPickerContainer,
   ContextMenuPopover,
   StyledInput,
-  StyledInputGroupButton,
 } from './styled';
 import { notifyToast } from './toast';
 import {
   errorMessages,
   filterPlayQueue,
-  getCurrentEntryList,
   getPlayedSongsNotification,
   isFailedResponse,
-  moveSelectedToIndex,
 } from '../../shared/utils';
 import { setStatus } from '../../redux/playerSlice';
 import { apiController } from '../../api/controller';
@@ -103,7 +86,6 @@ export const GlobalContextMenu = () => {
   const history = useHistory();
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
-  const playlist = useAppSelector((state) => state.playlist);
   const playQueue = useAppSelector((state) => state.playQueue);
   const misc = useAppSelector((state) => state.misc);
   const multiSelect = useAppSelector((state) => state.multiSelect);
@@ -114,7 +96,6 @@ export const GlobalContextMenu = () => {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
   const [shouldCreatePlaylist, setShouldCreatePlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [indexToMoveTo, setIndexToMoveTo] = useState(0);
   const [showSpectrogram, setShowSpectrogram] = useState(false);
   const playlistPickerContainerRef = useRef(null);
 
@@ -703,84 +684,6 @@ export const GlobalContextMenu = () => {
     }
   };
 
-  const handleMoveSelectedToIndex = () => {
-    if (misc.contextMenu.type === 'nowPlaying') {
-      const currentEntryList = getCurrentEntryList(playQueue);
-
-      if (Number(indexToMoveTo) === playQueue[currentEntryList].length) {
-        dispatch(moveToBottom({ selectedEntries: multiSelect.selected }));
-      } else {
-        dispatch(
-          moveToIndex(
-            moveSelectedToIndex(
-              playQueue[currentEntryList],
-              multiSelect.selected,
-              playQueue[currentEntryList][indexToMoveTo].uniqueId
-            )
-          )
-        );
-      }
-    } else if (Number(indexToMoveTo) === playlist.entry.length) {
-      dispatch(plMoveToBottom({ selectedEntries: multiSelect.selected }));
-    } else {
-      dispatch(
-        plMoveToIndex(
-          moveSelectedToIndex(
-            playlist.entry,
-            multiSelect.selected,
-            playlist.entry[indexToMoveTo].uniqueId
-          )
-        )
-      );
-    }
-  };
-
-  const handleMoveToTop = () => {
-    if (misc.contextMenu.type === 'nowPlaying') {
-      dispatch(moveToTop({ selectedEntries: multiSelect.selected }));
-      if (playQueue.currentPlayer === 1) {
-        dispatch(fixPlayer2Index());
-      }
-    } else {
-      dispatch(plMoveToTop({ selectedEntries: multiSelect.selected }));
-    }
-  };
-
-  const handleMoveToBottom = () => {
-    if (misc.contextMenu.type === 'nowPlaying') {
-      dispatch(moveToBottom({ selectedEntries: multiSelect.selected }));
-      if (playQueue.currentPlayer === 1) {
-        dispatch(fixPlayer2Index());
-      }
-    } else {
-      dispatch(plMoveToBottom({ selectedEntries: multiSelect.selected }));
-    }
-  };
-
-  const handleMoveUpOne = () => {
-    if (misc.contextMenu.type === 'nowPlaying') {
-      dispatch(moveUp({ selectedEntries: multiSelect.selected }));
-
-      if (playQueue.currentPlayer === 1) {
-        dispatch(fixPlayer2Index());
-      }
-    } else {
-      dispatch(plMoveUp({ selectedEntries: multiSelect.selected }));
-    }
-  };
-
-  const handleMoveDownOne = () => {
-    if (misc.contextMenu.type === 'nowPlaying') {
-      dispatch(moveDown({ selectedEntries: multiSelect.selected }));
-
-      if (playQueue.currentPlayer === 1) {
-        dispatch(fixPlayer2Index());
-      }
-    } else {
-      dispatch(plMoveDown({ selectedEntries: multiSelect.selected }));
-    }
-  };
-
   const handleViewInModal = () => {
     dispatch(setContextMenu({ show: false }));
     if (misc.contextMenu.type !== 'music' && multiSelect.selected.length === 1) {
@@ -834,7 +737,7 @@ export const GlobalContextMenu = () => {
           yPos={misc.contextMenu.yPos}
           minWidth={200}
           maxWidth={350}
-          numOfButtons={13}
+          numOfButtons={12}
           numOfDividers={3}
         >
           <ContextMenuButton
@@ -857,76 +760,6 @@ export const GlobalContextMenu = () => {
             onClick={handleRemoveSelected}
             disabled={misc.contextMenu.disabledOptions.includes('removeSelected')}
           />
-          <Whisper
-            enterable
-            placement="autoHorizontal"
-            trigger={misc.contextMenu.disabledOptions.includes('moveSelectedTo') ? 'none' : 'hover'}
-            delayShow={300}
-            speaker={
-              <ContextMenuPopover style={{ width: '150px' }}>
-                <Grid fluid>
-                  <Row>
-                    <Col xs={12}>
-                      <StyledButton onClick={handleMoveToTop} block>
-                        <Icon icon="angle-double-up" />
-                      </StyledButton>
-                    </Col>
-                    <Col xs={12}>
-                      <StyledButton onClick={handleMoveUpOne} block>
-                        <Icon icon="angle-up" />
-                      </StyledButton>
-                    </Col>
-                  </Row>
-                  <Row>
-                    <Col xs={12}>
-                      <StyledButton onClick={handleMoveToBottom} block>
-                        <Icon icon="angle-double-down" />
-                      </StyledButton>
-                    </Col>
-
-                    <Col xs={12}>
-                      <StyledButton onClick={handleMoveDownOne} block>
-                        <Icon icon="angle-down" />
-                      </StyledButton>
-                    </Col>
-                  </Row>
-                </Grid>
-                <br />
-
-                <Form>
-                  <StyledInputGroup>
-                    <StyledInputNumber
-                      defaultValue={0}
-                      min={0}
-                      max={
-                        misc.contextMenu.type === 'nowPlaying'
-                          ? playQueue[getCurrentEntryList(playQueue)]?.length
-                          : playlist.entry?.length
-                      }
-                      value={indexToMoveTo}
-                      onChange={(e: number) => setIndexToMoveTo(e)}
-                    />
-                    <StyledInputGroupButton
-                      type="submit"
-                      onClick={handleMoveSelectedToIndex}
-                      disabled={
-                        (misc.contextMenu.type === 'nowPlaying'
-                          ? indexToMoveTo > playQueue[getCurrentEntryList(playQueue)]?.length
-                          : indexToMoveTo > playlist.entry?.length) || indexToMoveTo < 0
-                      }
-                    >
-                      {t('Go')}
-                    </StyledInputGroupButton>
-                  </StyledInputGroup>
-                </Form>
-              </ContextMenuPopover>
-            }
-          >
-            <ContextMenuButton
-              text={t('Move selected to [...]')}
-              disabled={misc.contextMenu.disabledOptions.includes('moveSelectedTo')}
-            />
-          </Whisper>
           <ContextMenuDivider />
 
           <Whisper

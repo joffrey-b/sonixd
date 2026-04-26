@@ -378,7 +378,7 @@ export const moveSelectedToBottom = (entryData: any, selectedEntries: any) => {
 export const moveSelectedToIndex = (
   entryData: any,
   selectedEntries: any,
-  moveBeforeId: string | number
+  moveBeforeId: string | number | undefined
 ) => {
   const uniqueIds = _.map(selectedEntries, 'uniqueId');
 
@@ -386,6 +386,17 @@ export const moveSelectedToIndex = (
   const newList = entryData.filter((entry: any) => {
     return !uniqueIds.includes(entry.uniqueId);
   });
+
+  // When dropped below the last row, append selected entries to end
+  if (moveBeforeId === undefined) {
+    const sortedEntries = selectedEntries
+      .map((entry: any) => ({
+        ...entry,
+        rowIndex: entryData.findIndex((item: any) => item.uniqueId === entry.uniqueId),
+      }))
+      .sort((a: any, b: any) => a.rowIndex - b.rowIndex);
+    return [...newList, ...sortedEntries];
+  }
 
   // Used if dragging onto the first selected row. We'll need to calculate the number of selected rows above the first selected row
   // so we can subtract it from the spliceIndexPre value when moving it into the newList, which has all selected entries removed
@@ -410,7 +421,7 @@ export const moveSelectedToIndex = (
 
   // If we get a negative index, don't move the entry.
   // This can happen if you try to drag and drop too fast
-  if (spliceIndexPre < 0 && spliceIndexPre < 0) {
+  if (spliceIndexPre < 0 && spliceIndexPost < 0) {
     return entryData;
   }
 
