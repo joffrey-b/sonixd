@@ -433,7 +433,9 @@ const NowPlayingMiniView = () => {
                           })
                         );
                       }}
-                    />
+                    >
+                      {t('Auto scroll')}
+                    </StyledCheckbox>
                   </FlexboxGrid.Item>
                 </FlexboxGrid>
               </>

@@ -180,12 +180,13 @@ const ListViewType = (
         style={{
           flexGrow: 1,
           height: '100%',
+          cursor: isDragging ? 'all-scroll' : undefined,
         }}
         ref={wrapperRef}
         onMouseDown={(e) => {
           e.preventDefault();
           if (e.button === 1) {
-            setIsDragging(true);
+            setIsDragging(!isDragging);
           }
           if (e.button === 0 && isDragging) {
             setIsDragging(false);
