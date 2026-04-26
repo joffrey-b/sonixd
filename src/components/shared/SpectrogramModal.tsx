@@ -111,7 +111,9 @@ function getFreqLabels(nyquist: number): number[] {
 
 // Canvas pixel layout
 const CW = 1500; // total canvas width
-const CH = 520; // total canvas height
+const SPEC_H = 520; // spectrogram area height
+const TAXIS_H = 18; // time axis strip height below spectrogram
+const CH = SPEC_H + TAXIS_H; // total canvas height
 const AX_L = 48; // left freq-axis strip width
 const GRAD_GAP = 8; // gap between spectrogram and gradient
 const GRAD_W = 18; // color gradient bar width
@@ -138,7 +140,7 @@ const Container = styled.div`
   min-width: 500px;
   min-height: 320px;
   width: 860px;
-  height: 520px;
+  height: 538px;
   background: #111;
   display: flex;
   flex-direction: column;
@@ -243,17 +245,17 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, CW, CH);
 
-        // Linear frequency mapping: row 0 = top = nyquist, row CH-1 = bottom = 0 Hz
+        // Linear frequency mapping: row 0 = top = nyquist, row SPEC_H-1 = bottom = 0 Hz
         const freqPerBin = nyquist / (FFT_SIZE / 2);
-        const rowToBin = new Int32Array(CH);
-        for (let row = 0; row < CH; row++) {
-          const t = (CH - 1 - row) / (CH - 1); // 0 at bottom, 1 at top
+        const rowToBin = new Int32Array(SPEC_H);
+        for (let row = 0; row < SPEC_H; row++) {
+          const t = (SPEC_H - 1 - row) / (SPEC_H - 1); // 0 at bottom, 1 at top
           const freq = t * nyquist;
           rowToBin[row] = Math.min(FFT_SIZE / 2 - 1, Math.max(0, Math.round(freq / freqPerBin)));
         }
 
         // Compute and draw spectrogram
-        const imgData = ctx.createImageData(SPEC_W, CH);
+        const imgData = ctx.createImageData(SPEC_W, SPEC_H);
         for (let frame = 0; frame < numFrames; frame++) {
           if (cancelled) return;
           const offset = frame * hopSize;
@@ -262,7 +264,7 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
             im[i] = 0;
           }
           fft(re, im);
-          for (let row = 0; row < CH; row++) {
+          for (let row = 0; row < SPEC_H; row++) {
             const bin = rowToBin[row];
             const mag = Math.sqrt(re[bin] * re[bin] + im[bin] * im[bin]);
             const db = mag > 1e-10 ? 20 * Math.log10(mag / (FFT_SIZE / 2)) : -120;
@@ -294,11 +296,11 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         ctx.fillText(nyqLabel, AX_L - 4, 10);
 
         // Bottom label = 0
-        ctx.fillText('0', AX_L - 4, CH - 2);
+        ctx.fillText('0', AX_L - 4, SPEC_H - 2);
 
         // Intermediate freq labels + grid lines (linear spacing)
         for (const freq of getFreqLabels(nyquist)) {
-          const y = Math.round((1 - freq / nyquist) * (CH - 1));
+          const y = Math.round((1 - freq / nyquist) * (SPEC_H - 1));
           const label = freq >= 1000 ? `${freq / 1000}k` : `${freq}`;
           ctx.fillStyle = 'rgba(255,255,255,0.08)';
           ctx.fillRect(SPEC_X + 1, y, SPEC_W - 1, 1);
@@ -311,10 +313,10 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         ctx.fillRect(SPEC_X + SPEC_W, 0, AX_R, CH);
 
         // Gradient bar
-        const gradImgData = ctx.createImageData(GRAD_W, CH);
-        for (let y = 0; y < CH; y++) {
+        const gradImgData = ctx.createImageData(GRAD_W, SPEC_H);
+        for (let y = 0; y < SPEC_H; y++) {
           // top = 0 dB, bottom = -120 dB
-          const db = -120 + ((CH - 1 - y) / (CH - 1)) * 120;
+          const db = -120 + ((SPEC_H - 1 - y) / (SPEC_H - 1)) * 120;
           const [r, g, b] = dbToRgb(db);
           for (let x = 0; x < GRAD_W; x++) {
             const idx = (y * GRAD_W + x) * 4;
@@ -331,32 +333,29 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
         ctx.textAlign = 'left';
         for (let db = 0; db >= -120; db -= 10) {
           const t = (db + 120) / 120;
-          const y = Math.round((1 - t) * (CH - 1));
-          const textY = Math.max(10, Math.min(CH - 3, y + 4));
+          const y = Math.round((1 - t) * (SPEC_H - 1));
+          const textY = Math.max(10, Math.min(SPEC_H - 3, y + 4));
           ctx.fillStyle = 'rgba(255,255,255,0.3)';
           ctx.fillRect(GRAD_X - 2, y, 2, 1);
           ctx.fillStyle = 'rgba(255,255,255,0.7)';
           ctx.fillText(`${db} dB`, GRAD_X + GRAD_W + 4, textY);
         }
 
-        // Time axis (bottom strip overlaid on near-zero frequencies)
+        // Time axis (dedicated strip below spectrogram)
         const duration = totalSamples / sampleRate;
         const timeStep = duration < 90 ? 15 : duration < 300 ? 30 : duration < 600 ? 60 : 120;
         const formatTime = (s: number) =>
           `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-        const TAXIS_H = 16;
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(SPEC_X, CH - TAXIS_H, SPEC_W, TAXIS_H);
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.fillRect(SPEC_X, CH - TAXIS_H, SPEC_W, 1);
+        ctx.fillRect(SPEC_X, SPEC_H, SPEC_W, 1);
         ctx.font = '9px monospace';
         ctx.textAlign = 'center';
         for (let s = 0; s <= duration; s += timeStep) {
           const x = SPEC_X + Math.round((s / duration) * SPEC_W);
           ctx.fillStyle = 'rgba(255,255,255,0.25)';
-          ctx.fillRect(x, CH - TAXIS_H + 1, 1, 4);
+          ctx.fillRect(x, SPEC_H + 2, 1, 4);
           ctx.fillStyle = 'rgba(255,255,255,0.65)';
-          ctx.fillText(formatTime(s), x, CH - 3);
+          ctx.fillText(formatTime(s), x, SPEC_H + TAXIS_H - 3);
         }
 
         setStatus('done');
