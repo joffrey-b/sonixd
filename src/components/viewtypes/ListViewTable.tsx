@@ -480,12 +480,23 @@ const ListViewTable = ({
 
       dragScrollRafRef.current = requestAnimationFrame(tick);
 
-      const onDocumentMouseUp = () => {
+      const onDocumentMouseUp = (e: MouseEvent) => {
         isDragOriginRef.current = false;
         document.body.style.cursor = 'default';
-        handleDragEnd(currentDragDataRef.current);
-        if (nowPlaying && playQueue.currentPlayer === 1) {
-          dispatch(fixPlayer2Index());
+        const rect = tableContainerRef.current?.getBoundingClientRect();
+        const releasedInside =
+          rect &&
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom;
+        if (releasedInside) {
+          handleDragEnd(currentDragDataRef.current);
+          if (nowPlaying && playQueue.currentPlayer === 1) {
+            dispatch(fixPlayer2Index());
+          }
+        } else {
+          dispatch(setIsDragging(false));
         }
       };
 
