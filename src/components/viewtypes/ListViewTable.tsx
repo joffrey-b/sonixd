@@ -466,11 +466,12 @@ const ListViewTable = ({
         if (!tableContainerRef.current || !tableRef?.current) return;
         const rect = tableContainerRef.current.getBoundingClientRect();
         const y = mouseYRef.current;
+        const currentY = Math.abs(tableRef.current.scrollY ?? 0);
 
         if (y > rect.top && y < rect.top + ZONE) {
-          tableRef.current.scrollTop(Math.max(0, (tableRef.current.scrollY ?? 0) - SPEED));
+          tableRef.current.scrollTop(Math.max(0, currentY - SPEED));
         } else if (y > rect.bottom - ZONE && y < rect.bottom) {
-          tableRef.current.scrollTop((tableRef.current.scrollY ?? 0) + SPEED);
+          tableRef.current.scrollTop(currentY + SPEED);
         }
 
         dragScrollRafRef.current = requestAnimationFrame(tick);
