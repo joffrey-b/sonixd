@@ -162,7 +162,7 @@ const KeyboardShortcutsConfig = ({ bordered }: any) => {
       <ConfigOption
         name={t('Global shortcuts')}
         description={t(
-          'When enabled, the 6 playback shortcuts (play/pause, next, previous, volume, mute) work even when the app is not focused. Useful if you have no media keys.'
+          'When enabled, the 6 playback shortcuts (play/pause, next, previous, volume, mute) work even when the app is not focused. Note: these shortcuts are captured at the OS level and will override the same key combinations in other apps.'
         )}
         option={
           <StyledToggle
