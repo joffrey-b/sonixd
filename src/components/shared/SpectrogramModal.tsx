@@ -105,7 +105,7 @@ function probeNativeSampleRate(buf: ArrayBuffer): number {
 function getFreqLabels(nyquist: number): number[] {
   const step = nyquist >= 40000 ? 5000 : nyquist >= 25000 ? 4000 : 2000;
   const labels: number[] = [];
-  for (let f = step; f < nyquist; f += step) labels.push(f);
+  for (let f = step; f < nyquist - step / 2; f += step) labels.push(f);
   return labels;
 }
 
@@ -337,6 +337,26 @@ const SpectrogramModal = ({ show, handleHide, streamUrl, title, artist }: Props)
           ctx.fillRect(GRAD_X - 2, y, 2, 1);
           ctx.fillStyle = 'rgba(255,255,255,0.7)';
           ctx.fillText(`${db} dB`, GRAD_X + GRAD_W + 4, textY);
+        }
+
+        // Time axis (bottom strip overlaid on near-zero frequencies)
+        const duration = totalSamples / sampleRate;
+        const timeStep = duration < 90 ? 15 : duration < 300 ? 30 : duration < 600 ? 60 : 120;
+        const formatTime = (s: number) =>
+          `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+        const TAXIS_H = 16;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(SPEC_X, CH - TAXIS_H, SPEC_W, TAXIS_H);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(SPEC_X, CH - TAXIS_H, SPEC_W, 1);
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        for (let s = 0; s <= duration; s += timeStep) {
+          const x = SPEC_X + Math.round((s / duration) * SPEC_W);
+          ctx.fillStyle = 'rgba(255,255,255,0.25)';
+          ctx.fillRect(x, CH - TAXIS_H + 1, 1, 4);
+          ctx.fillStyle = 'rgba(255,255,255,0.65)';
+          ctx.fillText(formatTime(s), x, CH - 3);
         }
 
         setStatus('done');
