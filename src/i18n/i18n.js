@@ -15,6 +15,7 @@ const si = require('./locales/si.json');
 const it = require('./locales/it.json');
 const tr = require('./locales/tr.json');
 const ja = require('./locales/ja.json');
+const fr = require('./locales/fr.json');
 
 const resources = {
   en: { translation: en },
@@ -25,6 +26,7 @@ const resources = {
   it: { translation: it },
   tr: { translation: tr },
   ja: { translation: ja },
+  fr: { translation: fr },
 };
 
 i18n
@@ -45,28 +47,28 @@ export default i18n;
 
 export const Languages = [
   {
-    label: 'English',
-    value: 'en',
-  },
-  {
     label: 'Deutsch',
     value: 'de',
   },
   {
-    label: '简体中文',
-    value: 'zhcn',
+    label: 'English',
+    value: 'en',
   },
   {
     label: 'Español',
     value: 'es',
   },
   {
-    label: 'Sinhala',
-    value: 'si',
+    label: 'Français',
+    value: 'fr',
   },
   {
     label: 'Italiano',
     value: 'it',
+  },
+  {
+    label: 'Sinhala',
+    value: 'si',
   },
   {
     label: 'Türkçe',
@@ -75,5 +77,9 @@ export const Languages = [
   {
     label: '日本語',
     value: 'ja',
+  },
+  {
+    label: '简体中文',
+    value: 'zhcn',
   },
 ];
