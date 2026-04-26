@@ -485,6 +485,57 @@ const createWindow = async () => {
     });
   }
 
+  const CREDENTIAL_KEYS = new Set([
+    'server',
+    'serverBase64',
+    'serverType',
+    'username',
+    'password',
+    'salt',
+    'hash',
+    'token',
+    'userId',
+    'legacyAuth',
+    'musicFolder',
+  ]);
+
+  ipcMain.handle('export-settings', async () => {
+    try {
+      const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Export Settings',
+        defaultPath: 'sonixd-settings.json',
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      });
+      if (canceled || !filePath) return { success: false };
+      const store = { ...settings.store };
+      CREDENTIAL_KEYS.forEach((k) => delete store[k]);
+      fs.writeFileSync(filePath, JSON.stringify(store, null, 2), 'utf-8');
+      return { success: true };
+    } catch {
+      return { success: false, error: true };
+    }
+  });
+
+  ipcMain.handle('import-settings', async () => {
+    try {
+      const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+        title: 'Import Settings',
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+        properties: ['openFile'],
+      });
+      if (canceled || filePaths.length === 0) return { success: false };
+      const parsed = JSON.parse(fs.readFileSync(filePaths[0], 'utf-8'));
+      if (typeof parsed !== 'object' || Array.isArray(parsed))
+        return { success: false, error: true };
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (!CREDENTIAL_KEYS.has(key)) settings.set(key, value);
+      });
+      return { success: true };
+    } catch {
+      return { success: false, error: true };
+    }
+  });
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ipcMain.handle('file-path', async (_, argument) => {
     const filePath = dialog.showOpenDialogSync({

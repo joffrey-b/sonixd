@@ -23,6 +23,7 @@ import ExternalConfig from './ConfigPanels/ExternalConfig';
 import EQConfig from './ConfigPanels/EQConfig';
 import PEQConfig from './ConfigPanels/PEQConfig';
 import KeyboardShortcutsConfig from './ConfigPanels/KeyboardShortcutsConfig';
+import BackupConfig from './ConfigPanels/BackupConfig';
 import Popup from '../shared/Popup';
 
 const GITHUB_RELEASE_URL = 'https://api.github.com/repos/jeffvli/sonixd/releases?per_page=3';
@@ -282,6 +283,7 @@ const Config = () => {
           <ServerConfig bordered />
           <CacheConfig bordered />
           <WindowConfig bordered />
+          <BackupConfig bordered />
         </>
       )}
 
